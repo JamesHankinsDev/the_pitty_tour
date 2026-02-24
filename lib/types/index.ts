@@ -72,7 +72,7 @@ export interface Round {
   netScore: number      // auto-calculated
   differentialScore: number // auto-calculated
   attestations: Attestation[]
-  isValid: boolean      // true when 2+ attestations from different members
+  isValid: boolean      // true when 1+ attestation from a different member
   submittedAt: Timestamp
   notes: string
   // Admin override

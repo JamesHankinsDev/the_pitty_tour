@@ -223,7 +223,7 @@ export default function AdminOverview() {
                   </p>
                 </div>
                 <Badge variant="pending">
-                  {round.attestations.length}/2
+                  {round.attestations.length}/1
                 </Badge>
               </div>
             ))}

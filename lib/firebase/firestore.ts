@@ -293,7 +293,7 @@ export async function addAttestation(
 
   // Can't edit after attestation — handled by security rules too
   const newAttestations = [...round.attestations, attestation]
-  const isValid = newAttestations.length >= 2
+  const isValid = newAttestations.length >= 1
 
   await updateDoc(roundRef, {
     attestations: arrayUnion(attestation),

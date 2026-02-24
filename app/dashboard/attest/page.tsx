@@ -106,14 +106,8 @@ export default function AttestPage() {
         method: 'qr_scan',
       })
 
-      const wasJustValidated = round.attestations.length + 1 >= 2
       setStep('success')
-
-      if (wasJustValidated) {
-        toast.success(`🎉 ${scannedPlayer?.displayName}'s round is now VALID!`)
-      } else {
-        toast.success(`Attested! ${round.attestations.length + 1}/2 done.`)
-      }
+      toast.success(`🎉 ${scannedPlayer?.displayName}'s round is now VALID!`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Attestation failed.'
       toast.error(msg)
@@ -283,7 +277,7 @@ export default function AttestPage() {
             {selectedRound.courseName}.
           </p>
 
-          {selectedRound.attestations.length + 1 >= 2 && (
+          {selectedRound.attestations.length + 1 >= 1 && (
             <div className="bg-green-50 rounded-xl p-4 border border-green-200">
               <p className="text-green-800 font-semibold text-sm">
                 🎉 This round is now fully valid!

@@ -20,7 +20,7 @@ function EmptyRounds() {
       </div>
       <h3 className="font-semibold">No rounds yet</h3>
       <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-        Submit your first round to get started. You'll need 2 playing partners
+        Submit your first round to get started. You'll need 1 playing partner
         to attest it.
       </p>
       <Button variant="green" asChild>
@@ -140,7 +140,7 @@ export default function MyRoundsPage() {
             ) : (
               <>
                 <p className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
-                  These rounds need 2 playing partners to scan your QR code and
+                  These rounds need 1 playing partner to scan your QR code and
                   attest them.
                 </p>
                 {pendingRounds.map((round) => (

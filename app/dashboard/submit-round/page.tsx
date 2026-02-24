@@ -135,7 +135,7 @@ export default function SubmitRoundPage() {
           </div>
           <h2 className="text-2xl font-bold">Round Submitted!</h2>
           <p className="text-muted-foreground">
-            Your round is pending attestation. You need 2 playing partners to
+            Your round is pending attestation. You need 1 playing partner to
             scan your QR code and confirm your score.
           </p>
           <div className="flex flex-col gap-3 pt-4">
@@ -324,8 +324,8 @@ export default function SubmitRoundPage() {
             <div className="text-sm text-blue-800">
               <p className="font-semibold mb-1">After submitting:</p>
               <p>
-                Show your QR code to 2 playing partners. They'll scan it and
-                attest your score. You need both attestations before your round
+                Show your QR code to 1 playing partner. They'll scan it and
+                attest your score. You need their attestation before your round
                 counts.
               </p>
             </div>

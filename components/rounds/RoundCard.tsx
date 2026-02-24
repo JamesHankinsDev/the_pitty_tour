@@ -12,7 +12,7 @@ interface RoundCardProps {
   compact?: boolean
 }
 
-function AttestationPips({ count, required = 2 }: { count: number; required?: number }) {
+function AttestationPips({ count, required = 1 }: { count: number; required?: number }) {
   return (
     <div className="flex items-center gap-1.5">
       {Array.from({ length: required }).map((_, i) => (

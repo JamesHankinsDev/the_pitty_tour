@@ -70,7 +70,7 @@ export default function DashboardPage() {
 
   const currentMonthRounds = rounds.filter((r) => r.month === currentMonth)
   const hasValidRoundThisMonth = currentMonthRounds.some((r) => r.isValid)
-  const pendingRounds = rounds.filter((r) => !r.isValid && r.attestations.length < 2)
+  const pendingRounds = rounds.filter((r) => !r.isValid && r.attestations.length < 1)
 
   const validRounds = rounds.filter((r) => r.isValid)
   const bestGross = validRounds.length
@@ -245,8 +245,8 @@ export default function DashboardPage() {
                 <div>
                   <p className="font-medium">{round.courseName}</p>
                   <p className="text-muted-foreground text-xs">
-                    Gross: {round.grossScore} · {round.attestations.length}/2
-                    attestations
+                    Gross: {round.grossScore} · {round.attestations.length}/1
+                    attestation
                   </p>
                 </div>
                 <Badge
@@ -256,7 +256,7 @@ export default function DashboardPage() {
                       : 'warning'
                   }
                 >
-                  {round.attestations.length}/2
+                  {round.attestations.length}/1
                 </Badge>
               </div>
             ))}
