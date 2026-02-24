@@ -12,6 +12,20 @@ export interface UserProfile {
   memberSince: Timestamp
   totalPoints: number
   isAdmin: boolean
+  inviteToken: string // token used at registration; '' for seed/legacy users
+}
+
+// ─── Invite ───────────────────────────────────────────────────────────────────
+export interface Invite {
+  token: string           // same as the Firestore document ID
+  createdAt: Timestamp
+  createdByUid: string
+  expiresAt: Timestamp
+  usedAt: Timestamp | null
+  usedByUid: string | null
+  usedByEmail: string | null
+  note: string            // optional label, e.g. "For James H."
+  status: 'pending' | 'used' | 'expired'
 }
 
 // ─── Season ──────────────────────────────────────────────────────────────────

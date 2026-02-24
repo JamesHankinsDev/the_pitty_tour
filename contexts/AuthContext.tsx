@@ -9,10 +9,8 @@ import React, {
 } from 'react'
 import { User } from 'firebase/auth'
 import { onAuthChange, signInWithGoogle, signOut } from '@/lib/firebase/auth'
-import {
-  getUserProfile,
-  createUserProfile,
-} from '@/lib/firebase/firestore'
+import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore'
+import { claimInvite } from '@/lib/firebase/invites'
 import type { UserProfile } from '@/lib/types'
 
 interface AuthContextValue {
@@ -20,6 +18,8 @@ interface AuthContextValue {
   profile: UserProfile | null
   loading: boolean
   profileComplete: boolean
+  inviteRequired: boolean   // true when user signed in without a valid invite
+  inviteError: string | null
   signIn: () => Promise<void>
   logOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -31,12 +31,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [inviteRequired, setInviteRequired] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
 
   const loadProfile = useCallback(async (firebaseUser: User) => {
     let userProfile = await getUserProfile(firebaseUser.uid)
 
     if (!userProfile) {
-      // First login — create a minimal profile
+      // First login — check for a valid invite token in session
+      const token = sessionStorage.getItem('pity_invite_token')
+
+      if (!token) {
+        // No invite token present — reject sign-in
+        await signOut()
+        setUser(null)
+        setInviteRequired(true)
+        setInviteError(
+          'This app is invite-only. Please use your personal invite link before signing in.'
+        )
+        return
+      }
+
+      try {
+        await claimInvite(token, firebaseUser.uid, firebaseUser.email ?? '')
+        sessionStorage.removeItem('pity_invite_token')
+      } catch (err: unknown) {
+        // Invite was invalid, expired, or already used — reject sign-in
+        await signOut()
+        setUser(null)
+        setInviteRequired(true)
+        const msg = err instanceof Error ? err.message : ''
+        setInviteError(
+          msg === 'INVITE_ALREADY_USED'
+            ? 'This invite link has already been used. Ask your admin for a new one.'
+            : msg === 'INVITE_EXPIRED'
+            ? 'This invite link has expired. Ask your admin for a new one.'
+            : 'Invalid invite link. Please check the link and try again.'
+        )
+        return
+      }
+
+      // Invite claimed — create the new member profile
       await createUserProfile(firebaseUser.uid, {
         uid: firebaseUser.uid,
         displayName: firebaseUser.displayName ?? '',
@@ -47,10 +82,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         qrCode: firebaseUser.uid,
         totalPoints: 0,
         isAdmin: false,
+        inviteToken: token,
       })
       userProfile = await getUserProfile(firebaseUser.uid)
     }
 
+    // Existing users and newly registered users both land here
+    setInviteRequired(false)
+    setInviteError(null)
     setProfile(userProfile)
   }, [])
 
@@ -77,6 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut()
     setUser(null)
     setProfile(null)
+    setInviteRequired(false)
+    setInviteError(null)
   }
 
   const refreshProfile = async () => {
@@ -85,7 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Profile is "complete" when handicap and venmo have been set
   const profileComplete =
     !!profile &&
     !!profile.displayName &&
@@ -99,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         loading,
         profileComplete,
+        inviteRequired,
+        inviteError,
         signIn,
         logOut,
         refreshProfile,

@@ -13,6 +13,7 @@ import {
   DollarSign,
   LayoutDashboard,
   ArrowLeft,
+  Mail,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -22,6 +23,7 @@ const adminNav = [
   { href: '/admin/seasons', label: 'Seasons', icon: Calendar },
   { href: '/admin/rounds', label: 'Rounds', icon: ClipboardList },
   { href: '/admin/prize-pool', label: 'Prize Pool', icon: DollarSign },
+  { href: '/admin/invites', label: 'Invites', icon: Mail },
 ]
 
 export default function AdminLayout({
@@ -118,7 +120,7 @@ export default function AdminLayout({
       {/* Mobile admin bottom nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-green-950 border-t border-green-800">
         <div className="flex items-stretch">
-          {adminNav.slice(0, 5).map((item) => {
+          {adminNav.slice(0, 6).map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
             return (

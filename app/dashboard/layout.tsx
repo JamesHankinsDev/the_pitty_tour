@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { DashboardNav } from '@/components/layout/DashboardNav'
 import { MobileNav } from '@/components/layout/MobileNav'
 import { ProfileSetup } from '@/components/auth/ProfileSetup'
+import { InviteGate } from '@/components/auth/InviteGate'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardLayout({
@@ -13,14 +14,14 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, profile, loading, profileComplete } = useAuth()
+  const { user, profile, loading, profileComplete, inviteRequired, inviteError } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !inviteRequired) {
       router.replace('/')
     }
-  }, [user, loading, router])
+  }, [user, loading, inviteRequired, router])
 
   if (loading) {
     return (
@@ -32,6 +33,11 @@ export default function DashboardLayout({
         </div>
       </div>
     )
+  }
+
+  // Signed in without a valid invite — show rejection screen
+  if (inviteRequired) {
+    return <InviteGate error={inviteError} />
   }
 
   if (!user) return null

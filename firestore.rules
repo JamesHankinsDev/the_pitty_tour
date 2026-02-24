@@ -80,5 +80,34 @@ service cloud.firestore {
       // Points are calculated server-side (or by admin function)
       allow write: if isAdmin();
     }
+
+    // ─── Invites ──────────────────────────────────────────────────────────
+    match /invites/{token} {
+      // Single-document get allowed without auth — the token IS the secret.
+      // Listing all invites requires admin.
+      allow get: if true;
+      allow list: if isAdmin();
+
+      // Only admins can create invite links
+      allow create: if isAdmin()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.usedAt == null
+        && request.resource.data.usedByUid == null;
+
+      // An authenticated user can claim a pending invite (mark it used),
+      // OR an admin can update anything (e.g. revoke).
+      allow update: if isAdmin() || (
+        isAuthenticated()
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'used'
+        && request.resource.data.usedByUid == request.auth.uid
+        && request.resource.data.token == resource.data.token
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.expiresAt == resource.data.expiresAt
+      );
+
+      // Invites are a permanent audit trail — no deletion
+      allow delete: if false;
+    }
   }
 }
