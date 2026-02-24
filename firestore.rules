@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ──────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // ─── Users ────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      // Anyone authenticated can read basic user info (for attestation lookup)
+      allow read: if isAuthenticated();
+
+      // Users can only write their own profile; admins can write any
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+
+      // No deletion
+      allow delete: if false;
+    }
+
+    // ─── Seasons ─────────────────────────────────────────────────────────
+    match /seasons/{seasonId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ─── Registrations ────────────────────────────────────────────────────
+    match /registrations/{regId} {
+      allow read: if isAuthenticated();
+      // Only admins can create/update registrations (payment tracking)
+      allow write: if isAdmin();
+    }
+
+    // ─── Rounds ───────────────────────────────────────────────────────────
+    match /rounds/{roundId} {
+      allow read: if isAuthenticated();
+
+      // Players can only submit rounds for themselves
+      allow create: if isAuthenticated() &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.attestations.size() == 0 &&
+        request.resource.data.isValid == false;
+
+      // Update rules:
+      // 1. No edits allowed once any attestation exists (unless admin)
+      // 2. Attestors can add themselves (not the round owner, not already attested)
+      // 3. Admins can override anything
+      allow update: if isAdmin() ||
+        (isAuthenticated() &&
+          // Cannot edit own round
+          resource.data.uid != request.auth.uid &&
+          // Can only add attestations, not change score fields
+          request.resource.data.uid == resource.data.uid &&
+          request.resource.data.grossScore == resource.data.grossScore &&
+          request.resource.data.netScore == resource.data.netScore &&
+          request.resource.data.courseName == resource.data.courseName &&
+          request.resource.data.slopeRating == resource.data.slopeRating &&
+          request.resource.data.courseRating == resource.data.courseRating &&
+          // New attestation array must be one larger
+          request.resource.data.attestations.size() == resource.data.attestations.size() + 1);
+
+      allow delete: if isAdmin();
+    }
+
+    // ─── Points ───────────────────────────────────────────────────────────
+    match /points/{pointId} {
+      allow read: if isAuthenticated();
+      // Points are calculated server-side (or by admin function)
+      allow write: if isAdmin();
+    }
+  }
+}
