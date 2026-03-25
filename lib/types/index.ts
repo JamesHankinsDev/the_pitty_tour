@@ -115,62 +115,104 @@ export interface MonthlyLeaderboard {
 }
 
 // ─── Prize Pool ──────────────────────────────────────────────────────────────
-export interface PrizePoolSummary {
-  seasonId: string
-  totalRegistrationFees: number
-  totalMonthlyDues: number
-  totalForfeits: number
-  totalPool: number
-  monthlyPools: { [month: string]: MonthlyPrizePool }
-  championshipPool: number
+
+/** How monthly dues are split each month */
+export interface MonthlyPoolSplit {
+  totalDues: number            // total collected that month
+  seasonContribution: number   // 40% → goes to season purse
+  performancePurse: number     // 60% → distributed that month
 }
 
-export interface MonthlyPrizePool {
-  month: string
-  totalPaid: number
-  totalForfeited: number
-  totalPool: number
-  breakdown: PrizeBreakdown[]
+/** Breakdown of the monthly performance purse */
+export interface MonthlyPerformancePurse {
+  netPool: number      // 40% of performance purse → top 3 net
+  grossPool: number    // 30% of performance purse → top 2 gross
+  skillPool: number    // 30% of performance purse → sand saves + par-3 pars
+  savesPool: number    // 50% of skill pool
+  par3Pool: number     // 50% of skill pool
 }
 
-export interface PrizeBreakdown {
-  position: string  // e.g. "1st Gross"
-  percentage: number
-  amount: number
-  winnerUid?: string
-  winnerName?: string
+/** Individual monthly payout for a player */
+export interface MonthlyPlayerPayout {
+  uid: string
+  grossPayout: number
+  netPayout: number
+  savesPayout: number
+  par3Payout: number
+  totalPayout: number
 }
 
-// ─── Scoring Constants ───────────────────────────────────────────────────────
-export const MONTHLY_PRIZE_PERCENTAGES = {
-  grossFirst: 0.35,
-  grossSecond: 0.15,
-  grossThird: 0.10,
-  netFirst: 0.25,
-  netSecond: 0.10,
-  netThird: 0.05,
+/** Season purse allocation */
+export interface SeasonPurseBreakdown {
+  totalPurse: number
+  top3Pool: number       // 65%
+  swagPool: number       // 10%
+  bonusPool: number      // 15%
+  partyPool: number      // 10%
 }
 
-export const CHAMPIONSHIP_PRIZE_PERCENTAGES = {
-  grossFirst: 0.30,
-  grossSecond: 0.15,
-  grossThird: 0.10,
-  netFirst: 0.25,
-  netSecond: 0.12,
-  netThird: 0.08,
+/** Season top-3 payouts */
+export interface SeasonTop3Payouts {
+  first: number    // 50% of top3Pool
+  second: number   // 30% of top3Pool
+  third: number    // 20% of top3Pool
 }
+
+/** Season bonus categories (each 20% of bonus pool) */
+export interface SeasonBonusPayouts {
+  mostSaves: number
+  mostPar3Pars: number
+  mostTourCards: number
+  mostEventsPlayed: number
+  mrIrrelevant: number
+}
+
+// ─── Payout Constants ────────────────────────────────────────────────────────
+
+/** Monthly dues split */
+export const MONTHLY_SEASON_CONTRIBUTION_PCT = 0.40
+export const MONTHLY_PERFORMANCE_PCT = 0.60
+
+/** Monthly performance purse split */
+export const MONTHLY_NET_PCT = 0.40    // of performance purse
+export const MONTHLY_GROSS_PCT = 0.30  // of performance purse
+export const MONTHLY_SKILL_PCT = 0.30  // of performance purse
+
+/** Monthly net payouts (% of net pool) */
+export const NET_PAYOUTS = [0.50, 0.30, 0.20] // 1st, 2nd, 3rd
+
+/** Monthly gross payouts (% of gross pool) */
+export const GROSS_PAYOUTS = [0.60, 0.40] // 1st, 2nd
+
+/** Season purse allocation */
+export const SEASON_TOP3_PCT = 0.65
+export const SEASON_SWAG_PCT = 0.10
+export const SEASON_BONUS_PCT = 0.15
+export const SEASON_PARTY_PCT = 0.10
+
+/** Season top-3 split (of the 65% top3 pool) */
+export const SEASON_1ST_PCT = 0.50
+export const SEASON_2ND_PCT = 0.30
+export const SEASON_3RD_PCT = 0.20
+
+/** Points awarded by net-score rank */
 
 export const POINTS_BY_RANK: Record<number, number> = {
-  1: 100,
-  2: 85,
-  3: 75,
-  4: 65,
-  5: 55,
-  6: 50,
-  7: 45,
-  8: 40,
-  9: 35,
-  10: 30,
+  1: 500,
+  2: 450,
+  3: 375,
+  4: 350,
+  5: 275,
+  6: 200,
+  7: 150,
+  8: 100,
+  9: 75,
+  10: 50,
 }
 
-export const POINTS_DEFAULT = 20 // 11th place and beyond
+export const POINTS_DEFAULT = 25 // 11th place and beyond
+
+/** Bonus points */
+export const POINTS_PARTICIPATION_BONUS = 25   // for showing up
+export const POINTS_AFFILIATE_PAIR_BONUS = 50  // for playing with affiliate pair
+export const POINTS_SKILL_POOL = 100           // shared pool for sand saves + par-3 pars

@@ -1,5 +1,30 @@
-import type { Round, Points } from '../types'
-import { POINTS_BY_RANK, POINTS_DEFAULT } from '../types'
+import type {
+  Round,
+  Points,
+  MonthlyPoolSplit,
+  MonthlyPerformancePurse,
+  SeasonPurseBreakdown,
+  SeasonTop3Payouts,
+  SeasonBonusPayouts,
+} from '../types'
+import {
+  POINTS_BY_RANK,
+  POINTS_DEFAULT,
+  MONTHLY_SEASON_CONTRIBUTION_PCT,
+  MONTHLY_PERFORMANCE_PCT,
+  MONTHLY_NET_PCT,
+  MONTHLY_GROSS_PCT,
+  MONTHLY_SKILL_PCT,
+  NET_PAYOUTS,
+  GROSS_PAYOUTS,
+  SEASON_TOP3_PCT,
+  SEASON_SWAG_PCT,
+  SEASON_BONUS_PCT,
+  SEASON_PARTY_PCT,
+  SEASON_1ST_PCT,
+  SEASON_2ND_PCT,
+  SEASON_3RD_PCT,
+} from '../types'
 
 // ─── Score Calculations ───────────────────────────────────────────────────────
 
@@ -112,27 +137,96 @@ export function calculateMonthlyPoints(
   return result
 }
 
-// ─── Prize Money ──────────────────────────────────────────────────────────────
+// ─── Monthly Pool Split ──────────────────────────────────────────────────────
 
-export function calculateMonthlyPrizes(totalPool: number) {
+/**
+ * Split monthly dues into season contribution (40%) and performance purse (60%)
+ */
+export function calculateMonthlyPoolSplit(totalDues: number): MonthlyPoolSplit {
+  const seasonContribution = Math.round(totalDues * MONTHLY_SEASON_CONTRIBUTION_PCT * 100) / 100
+  const performancePurse = Math.round((totalDues - seasonContribution) * 100) / 100
+  return { totalDues, seasonContribution, performancePurse }
+}
+
+/**
+ * Break the performance purse into Net (40%), Gross (30%), and Skill (30%) pools
+ */
+export function calculatePerformancePurse(performancePurse: number): MonthlyPerformancePurse {
+  const netPool = Math.round(performancePurse * MONTHLY_NET_PCT * 100) / 100
+  const grossPool = Math.round(performancePurse * MONTHLY_GROSS_PCT * 100) / 100
+  const skillPool = Math.round(performancePurse * MONTHLY_SKILL_PCT * 100) / 100
+  const savesPool = Math.round(skillPool * 0.5 * 100) / 100
+  const par3Pool = Math.round(skillPool * 0.5 * 100) / 100
+  return { netPool, grossPool, skillPool, savesPool, par3Pool }
+}
+
+/**
+ * Calculate net payouts for top 3 net performers
+ */
+export function calculateNetPayouts(netPool: number): number[] {
+  return NET_PAYOUTS.map((pct) => Math.round(netPool * pct * 100) / 100)
+}
+
+/**
+ * Calculate gross payouts for top 2 gross performers
+ */
+export function calculateGrossPayouts(grossPool: number): number[] {
+  return GROSS_PAYOUTS.map((pct) => Math.round(grossPool * pct * 100) / 100)
+}
+
+/**
+ * Calculate per-occurrence skill bonus payouts
+ */
+export function calculateSkillPayouts(
+  savesPool: number,
+  par3Pool: number,
+  totalSaves: number,
+  totalPar3Pars: number
+): { perSave: number; perPar3: number } {
   return {
-    grossFirst: Math.floor(totalPool * 0.35),
-    grossSecond: Math.floor(totalPool * 0.15),
-    grossThird: Math.floor(totalPool * 0.10),
-    netFirst: Math.floor(totalPool * 0.25),
-    netSecond: Math.floor(totalPool * 0.10),
-    netThird: Math.floor(totalPool * 0.05),
+    perSave: totalSaves > 0 ? Math.round((savesPool / totalSaves) * 100) / 100 : 0,
+    perPar3: totalPar3Pars > 0 ? Math.round((par3Pool / totalPar3Pars) * 100) / 100 : 0,
   }
 }
 
-export function calculateChampionshipPrizes(totalPool: number) {
+// ─── Season Purse ────────────────────────────────────────────────────────────
+
+/**
+ * Calculate season purse breakdown from total season pool
+ * Season pool = sum of monthly season contributions + registration fees
+ */
+export function calculateSeasonPurse(totalPurse: number): SeasonPurseBreakdown {
   return {
-    grossFirst: Math.floor(totalPool * 0.30),
-    grossSecond: Math.floor(totalPool * 0.15),
-    grossThird: Math.floor(totalPool * 0.10),
-    netFirst: Math.floor(totalPool * 0.25),
-    netSecond: Math.floor(totalPool * 0.12),
-    netThird: Math.floor(totalPool * 0.08),
+    totalPurse,
+    top3Pool: Math.round(totalPurse * SEASON_TOP3_PCT * 100) / 100,
+    swagPool: Math.round(totalPurse * SEASON_SWAG_PCT * 100) / 100,
+    bonusPool: Math.round(totalPurse * SEASON_BONUS_PCT * 100) / 100,
+    partyPool: Math.round(totalPurse * SEASON_PARTY_PCT * 100) / 100,
+  }
+}
+
+/**
+ * Calculate season top-3 payouts from the top3 pool (65% of season purse)
+ */
+export function calculateSeasonTop3(top3Pool: number): SeasonTop3Payouts {
+  return {
+    first: Math.round(top3Pool * SEASON_1ST_PCT * 100) / 100,
+    second: Math.round(top3Pool * SEASON_2ND_PCT * 100) / 100,
+    third: Math.round(top3Pool * SEASON_3RD_PCT * 100) / 100,
+  }
+}
+
+/**
+ * Calculate season bonus payouts (5 categories, each 20% of bonus pool)
+ */
+export function calculateSeasonBonuses(bonusPool: number): SeasonBonusPayouts {
+  const each = Math.round(bonusPool * 0.20 * 100) / 100
+  return {
+    mostSaves: each,
+    mostPar3Pars: each,
+    mostTourCards: each,
+    mostEventsPlayed: each,
+    mrIrrelevant: each,
   }
 }
 

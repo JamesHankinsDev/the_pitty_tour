@@ -8,8 +8,9 @@ import {
   getAllUsers,
 } from '@/lib/firebase/firestore'
 import {
-  calculateMonthlyPrizes,
-  calculateChampionshipPrizes,
+  calculateMonthlyPoolSplit,
+  calculatePerformancePurse,
+  calculateSeasonPurse,
 } from '@/lib/utils/scoring'
 import {
   getSeasonMonths,
@@ -110,9 +111,13 @@ export default function AdminPrizePoolPage() {
   )
   const paidCount = regs.filter((r) => r.hasPaidRegistration).length
   const totalForfeits = regs.reduce((s, r) => s + r.totalForfeited, 0)
-  const championshipPool =
-    paidCount * season.registrationFee + totalForfeits
-  const monthlyPool = regs.length * season.monthlyDue
+  const monthlyDuesCollected = regs.length * season.monthlyDue
+  const poolSplit = calculateMonthlyPoolSplit(monthlyDuesCollected)
+  const seasonMonthCount = getSeasonMonths(season.year, season.startMonth, season.endMonth).length
+  const registrationFeePool = paidCount * season.registrationFee
+  const estimatedSeasonPurse =
+    poolSplit.seasonContribution * seasonMonthCount + registrationFeePool + totalForfeits
+  const monthlyPerformance = poolSplit.performancePurse
 
   if (loading) {
     return (
@@ -136,21 +141,29 @@ export default function AdminPrizePoolPage() {
       </div>
 
       {/* Pool totals */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-black text-green-700">
-              ${monthlyPool.toLocaleString()}
+              ${monthlyDuesCollected.toLocaleString()}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">Monthly Pool</p>
+            <p className="text-xs text-muted-foreground mt-1">Monthly Dues</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-black text-green-600">
+              ${monthlyPerformance.toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Performance (60%)</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-black text-yellow-600">
-              ${championshipPool.toLocaleString()}
+              ${estimatedSeasonPurse.toLocaleString()}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">Championship Pool</p>
+            <p className="text-xs text-muted-foreground mt-1">Est. Season Purse</p>
           </CardContent>
         </Card>
         <Card>
