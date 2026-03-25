@@ -9,6 +9,8 @@ import {
   collection,
   query,
   orderBy,
+  where,
+  limit,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
@@ -46,6 +48,21 @@ export async function getAllInvites(): Promise<Invite[]> {
   )
   const snap = await getDocs(q)
   return snap.docs.map((d) => d.data() as Invite)
+}
+
+/**
+ * Find a claimed invite for a given uid.
+ * Used for recovery when invite was claimed but profile creation failed.
+ */
+export async function getInviteByUser(uid: string): Promise<Invite | null> {
+  const q = query(
+    collection(db, INVITES_COLLECTION),
+    where('usedByUid', '==', uid),
+    where('status', '==', 'used'),
+    limit(1)
+  )
+  const snap = await getDocs(q)
+  return snap.empty ? null : (snap.docs[0].data() as Invite)
 }
 
 // ─── Create ───────────────────────────────────────────────────────────────────
