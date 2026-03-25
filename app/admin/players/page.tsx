@@ -24,6 +24,7 @@ import {
   XCircle,
   Shield,
   UserPlus,
+  DollarSign,
 } from 'lucide-react'
 import type { UserProfile, Registration } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
@@ -110,6 +111,23 @@ export default function AdminPlayersPage() {
     }
   }
 
+  // Generate month keys for the active season (e.g. ["2026-04", "2026-05", ...])
+  const seasonMonths = season
+    ? Array.from(
+        { length: season.endMonth - season.startMonth + 1 },
+        (_, i) => {
+          const m = season.startMonth + i
+          return `${season.year}-${String(m).padStart(2, '0')}`
+        }
+      )
+    : []
+
+  const monthLabel = (monthKey: string) => {
+    const [, m] = monthKey.split('-')
+    const names = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return names[parseInt(m, 10)] ?? m
+  }
+
   const filteredUsers = users.filter(
     (u) =>
       u.displayName.toLowerCase().includes(search.toLowerCase()) ||
@@ -178,29 +196,55 @@ export default function AdminPlayersPage() {
 
                     {/* Season registration */}
                     {season && (
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      <div className="mt-3 space-y-2">
                         {reg ? (
                           <>
-                            <button
-                              onClick={() => handleToggleRegistrationPaid(reg)}
-                              className="text-xs"
-                            >
-                              <Badge
-                                variant={
-                                  reg.hasPaidRegistration ? 'success' : 'warning'
-                                }
-                                className="cursor-pointer"
+                            {/* Registration fee + forfeits row */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                onClick={() => handleToggleRegistrationPaid(reg)}
+                                className="text-xs"
                               >
-                                {reg.hasPaidRegistration
-                                  ? '✓ Reg Paid'
-                                  : '✗ Reg Unpaid'}
-                              </Badge>
-                            </button>
-                            {reg.forfeitedMonths.length > 0 && (
-                              <Badge variant="destructive" className="text-xs">
-                                {reg.forfeitedMonths.length} forfeit(s)
-                              </Badge>
-                            )}
+                                <Badge
+                                  variant={
+                                    reg.hasPaidRegistration ? 'success' : 'warning'
+                                  }
+                                  className="cursor-pointer"
+                                >
+                                  {reg.hasPaidRegistration
+                                    ? '✓ Reg Paid ($' + season.registrationFee + ')'
+                                    : '✗ Reg Unpaid ($' + season.registrationFee + ')'}
+                                </Badge>
+                              </button>
+                              {reg.forfeitedMonths.length > 0 && (
+                                <Badge variant="destructive" className="text-xs">
+                                  {reg.forfeitedMonths.length} forfeit(s) · ${reg.totalForfeited}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Monthly dues toggles */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <DollarSign className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-xs text-muted-foreground mr-1">Monthly:</span>
+                              {seasonMonths.map((month) => {
+                                const paid = !!reg.monthlyPayments[month]
+                                return (
+                                  <button
+                                    key={month}
+                                    onClick={() => handleToggleMonthPaid(reg, month)}
+                                    title={`${month}: ${paid ? 'Paid' : 'Unpaid'} — click to toggle`}
+                                  >
+                                    <Badge
+                                      variant={paid ? 'success' : 'outline'}
+                                      className="cursor-pointer text-xs px-2 py-0.5"
+                                    >
+                                      {monthLabel(month)}
+                                    </Badge>
+                                  </button>
+                                )
+                              })}
+                            </div>
                           </>
                         ) : (
                           <Button
