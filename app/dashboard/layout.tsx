@@ -7,6 +7,7 @@ import { DashboardNav } from '@/components/layout/DashboardNav'
 import { MobileNav } from '@/components/layout/MobileNav'
 import { ProfileSetup } from '@/components/auth/ProfileSetup'
 import { InviteGate } from '@/components/auth/InviteGate'
+import { DemoBanner } from '@/components/demo/DemoBanner'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardLayout({
@@ -14,14 +15,14 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, profile, loading, profileComplete, inviteRequired, inviteError } = useAuth()
+  const { user, profile, loading, profileComplete, inviteRequired, inviteError, isDemo } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user && !inviteRequired) {
+    if (!loading && !user && !isDemo && !inviteRequired) {
       router.replace('/')
     }
-  }, [user, loading, inviteRequired, router])
+  }, [user, loading, inviteRequired, isDemo, router])
 
   if (loading) {
     return (
@@ -40,30 +41,32 @@ export default function DashboardLayout({
     return <InviteGate error={inviteError} />
   }
 
-  if (!user) return null
+  if (!user && !isDemo) return null
 
-  // Force profile completion before using app
-  if (!profileComplete) {
+  // Force profile completion before using app (skip in demo)
+  if (!isDemo && !profileComplete) {
     return <ProfileSetup />
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Sidebar nav — desktop only */}
-      <aside className="hidden lg:flex w-60 shrink-0 border-r flex-col fixed inset-y-0 left-0 z-30 bg-background">
-        <DashboardNav />
-      </aside>
+    <div className="min-h-screen flex flex-col">
+      {isDemo && <DemoBanner />}
+      <div className="flex flex-1">
+        {/* Sidebar nav — desktop only */}
+        <aside className={`hidden lg:flex w-60 shrink-0 border-r flex-col fixed ${isDemo ? 'top-10' : 'top-0'} bottom-0 left-0 z-30 bg-background`}>
+          <DashboardNav />
+        </aside>
 
-      {/* Mobile nav */}
-      <MobileNav />
+        {/* Mobile nav */}
+        <MobileNav />
 
-      {/* Main content */}
-      <main className="flex-1 lg:ml-60">
-        {/* Top padding for mobile header */}
-        <div className="pt-14 pb-20 lg:pt-0 lg:pb-0">
-          {children}
-        </div>
-      </main>
+        {/* Main content */}
+        <main className="flex-1 lg:ml-60">
+          <div className={`${isDemo ? 'pt-24 lg:pt-10' : 'pt-14 lg:pt-0'} pb-20 lg:pb-0`}>
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

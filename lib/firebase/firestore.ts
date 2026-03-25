@@ -20,7 +20,21 @@ import {
   DocumentSnapshot,
   QuerySnapshot,
 } from 'firebase/firestore'
+import { toast } from 'sonner'
 import { db } from './config'
+
+// ─── Demo Mode Guard ────────────────────────────────────────────────────────
+let _demoMode = false
+export function setDemoMode(active: boolean) { _demoMode = active }
+export function isDemoMode() { return _demoMode }
+
+function guardDemoWrite(action: string): boolean {
+  if (_demoMode) {
+    toast.info(`${action} is disabled in demo mode. Sign in to use this feature!`)
+    return true
+  }
+  return false
+}
 import type {
   UserProfile,
   Season,
@@ -50,6 +64,7 @@ export async function createUserProfile(
   uid: string,
   data: Partial<UserProfile>
 ): Promise<void> {
+  if (guardDemoWrite('Creating profiles')) return;
   const docRef = doc(db, COLLECTIONS.USERS, uid)
   await setDoc(docRef, {
     ...data,
@@ -65,6 +80,7 @@ export async function updateUserProfile(
   uid: string,
   data: Partial<UserProfile>
 ): Promise<void> {
+  if (guardDemoWrite('Updating profiles')) return;
   const docRef = doc(db, COLLECTIONS.USERS, uid)
   await updateDoc(docRef, data as Record<string, unknown>)
 }
@@ -111,6 +127,7 @@ export async function getAllSeasons(): Promise<Season[]> {
 }
 
 export async function createSeason(data: Omit<Season, 'id'>): Promise<string> {
+  if (guardDemoWrite('Creating seasons')) return '';
   const ref = await addDoc(collection(db, COLLECTIONS.SEASONS), data)
   return ref.id
 }
@@ -140,6 +157,7 @@ export async function getRegistration(
 export async function createRegistration(
   data: Omit<Registration, 'id'>
 ): Promise<string> {
+  if (guardDemoWrite('Creating registrations')) return '';
   const ref = await addDoc(collection(db, COLLECTIONS.REGISTRATIONS), {
     ...data,
     registeredAt: serverTimestamp(),
@@ -176,6 +194,7 @@ export async function getSeasonRegistrations(
 export async function submitRound(
   data: Omit<Round, 'id' | 'submittedAt' | 'attestations' | 'isValid'>
 ): Promise<string> {
+  if (guardDemoWrite('Submitting rounds')) return '';
   const ref = await addDoc(collection(db, COLLECTIONS.ROUNDS), {
     ...data,
     submittedAt: serverTimestamp(),
@@ -271,6 +290,7 @@ export async function addAttestation(
   roundId: string,
   attestation: Attestation
 ): Promise<void> {
+  if (guardDemoWrite('Attesting rounds')) return;
   const roundRef = doc(db, COLLECTIONS.ROUNDS, roundId)
   const roundSnap = await getDoc(roundRef)
 

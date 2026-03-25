@@ -44,7 +44,7 @@ const menuItems = [
 
 export function MobileNav() {
   const pathname = usePathname()
-  const { profile, logOut } = useAuth()
+  const { profile, logOut, isDemo } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -151,7 +151,7 @@ export function MobileNav() {
               }}
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+              {isDemo ? 'Exit Demo' : 'Sign Out'}
             </Button>
           </div>
         </div>

@@ -7,22 +7,26 @@ import {
   getAllUsers,
 } from '@/lib/firebase/firestore'
 import { calculateMonthlyPoints } from '@/lib/utils/scoring'
+import { useAuth } from '@/contexts/AuthContext'
+import { DEMO_LEADERBOARD } from '@/lib/demo/data'
 import type { Round, Points, LeaderboardEntry, UserProfile } from '@/lib/types'
 
 export function useMonthLeaderboard(
   seasonId: string | undefined,
   month: string
 ) {
+  const { isDemo } = useAuth()
   const [rounds, setRounds] = useState<Round[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isDemo) return
     getAllUsers().then(setUsers)
-  }, [])
+  }, [isDemo])
 
   useEffect(() => {
-    if (!seasonId) {
+    if (isDemo || !seasonId) {
       setLoading(false)
       return
     }
@@ -32,9 +36,11 @@ export function useMonthLeaderboard(
       setLoading(false)
     })
     return unsub
-  }, [seasonId, month])
+  }, [seasonId, month, isDemo])
 
   const { grossStandings, netStandings } = useMemo(() => {
+    if (isDemo) return DEMO_LEADERBOARD
+
     const validRounds = rounds.filter((r) => r.isValid)
 
     // Best round per player
@@ -77,22 +83,25 @@ export function useMonthLeaderboard(
       grossStandings: grossSorted.map((r, i) => makeEntry(r, i + 1)),
       netStandings: netSorted.map((r, i) => makeEntry(r, i + 1)),
     }
-  }, [rounds, users])
+  }, [rounds, users, isDemo])
 
+  if (isDemo) return { grossStandings: DEMO_LEADERBOARD.grossStandings, netStandings: DEMO_LEADERBOARD.netStandings, loading: false }
   return { grossStandings, netStandings, loading }
 }
 
 export function useSeasonLeaderboard(seasonId: string | undefined) {
+  const { isDemo } = useAuth()
   const [allPoints, setAllPoints] = useState<Points[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isDemo) return
     getAllUsers().then(setUsers)
-  }, [])
+  }, [isDemo])
 
   useEffect(() => {
-    if (!seasonId) {
+    if (isDemo || !seasonId) {
       setLoading(false)
       return
     }
@@ -102,12 +111,13 @@ export function useSeasonLeaderboard(seasonId: string | undefined) {
       setLoading(false)
     })
     return unsub
-  }, [seasonId])
+  }, [seasonId, isDemo])
 
   const { grossStandings, netStandings } = useMemo(() => {
+    if (isDemo) return DEMO_LEADERBOARD
+
     const userMap = new Map(users.map((u) => [u.uid, u]))
 
-    // Aggregate points by player
     const aggregated = new Map<
       string,
       { grossPoints: number; netPoints: number; totalPoints: number; months: number }
@@ -151,7 +161,8 @@ export function useSeasonLeaderboard(seasonId: string | undefined) {
       .map((e, i) => ({ ...e, rank: i + 1 }))
 
     return { grossStandings: grossSorted, netStandings: netSorted }
-  }, [allPoints, users])
+  }, [allPoints, users, isDemo])
 
+  if (isDemo) return { grossStandings: DEMO_LEADERBOARD.grossStandings, netStandings: DEMO_LEADERBOARD.netStandings, loading: false }
   return { grossStandings, netStandings, loading }
 }

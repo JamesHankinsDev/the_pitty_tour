@@ -10,14 +10,19 @@ import { toast } from 'sonner'
 export const dynamic = 'force-dynamic'
 
 export default function LandingPage() {
-  const { user, signIn, loading } = useAuth()
+  const { user, signIn, loading, isDemo, enterDemo } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && (user || isDemo)) {
       router.replace('/dashboard')
     }
-  }, [user, loading, router])
+  }, [user, loading, isDemo, router])
+
+  const handleDemo = () => {
+    enterDemo()
+    router.push('/dashboard')
+  }
 
   const handleSignIn = async () => {
     try {
@@ -104,6 +109,16 @@ export default function LandingPage() {
                 </svg>
                 Sign In with Google
                 <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+
+              {/* Try Demo */}
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-green-400/50 text-green-200 hover:bg-green-800/50 hover:text-white"
+                onClick={handleDemo}
+              >
+                Explore Demo
               </Button>
 
               {/* Invite-only notice for new visitors */}

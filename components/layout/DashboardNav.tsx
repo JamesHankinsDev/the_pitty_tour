@@ -34,7 +34,7 @@ const adminItems = [{ href: "/admin", label: "Admin", icon: Shield }];
 
 export function DashboardNav() {
   const pathname = usePathname();
-  const { profile, logOut } = useAuth();
+  const { profile, logOut, isDemo } = useAuth();
 
   return (
     <nav className="flex flex-col h-full">
@@ -123,7 +123,7 @@ export function DashboardNav() {
         </div>
         <Button variant="outline" size="sm" className="w-full" onClick={logOut}>
           <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
+          {isDemo ? 'Exit Demo' : 'Sign Out'}
         </Button>
       </div>
     </nav>

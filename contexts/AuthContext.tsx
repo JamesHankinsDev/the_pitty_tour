@@ -11,6 +11,8 @@ import { User } from 'firebase/auth'
 import { onAuthChange, signInWithGoogle, signOut } from '@/lib/firebase/auth'
 import { getUserProfile, createUserProfile, updateUserProfile } from '@/lib/firebase/firestore'
 import { claimInvite } from '@/lib/firebase/invites'
+import { setDemoMode } from '@/lib/firebase/firestore'
+import { DEMO_PROFILE } from '@/lib/demo/data'
 import type { UserProfile } from '@/lib/types'
 
 interface AuthContextValue {
@@ -18,11 +20,14 @@ interface AuthContextValue {
   profile: UserProfile | null
   loading: boolean
   profileComplete: boolean
-  inviteRequired: boolean   // true when user signed in without a valid invite
+  inviteRequired: boolean
   inviteError: string | null
+  isDemo: boolean
   signIn: () => Promise<void>
   logOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  enterDemo: () => void
+  exitDemo: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -33,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [inviteRequired, setInviteRequired] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
+  const [isDemo, setIsDemo] = useState(false)
 
   const loadProfile = useCallback(async (firebaseUser: User) => {
     let userProfile = await getUserProfile(firebaseUser.uid)
@@ -42,7 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = sessionStorage.getItem('pity_invite_token')
 
       if (!token) {
-        // No invite token present — reject sign-in
         await signOut()
         setUser(null)
         setInviteRequired(true)
@@ -56,7 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await claimInvite(token, firebaseUser.uid, firebaseUser.email ?? '')
         sessionStorage.removeItem('pity_invite_token')
       } catch (err: unknown) {
-        // Invite was invalid, expired, or already used — reject sign-in
         await signOut()
         setUser(null)
         setInviteRequired(true)
@@ -71,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Invite claimed — create the new member profile
       await createUserProfile(firebaseUser.uid, {
         uid: firebaseUser.uid,
         displayName: firebaseUser.displayName ?? '',
@@ -88,7 +91,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userProfile = await getUserProfile(firebaseUser.uid)
     }
 
-    // Existing users and newly registered users both land here
     setInviteRequired(false)
     setInviteError(null)
     setProfile(userProfile)
@@ -118,7 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (typeof newIndex === 'number' && newIndex !== userProfile.handicapIndex) {
       await updateUserProfile(userProfile.uid, { handicapIndex: newIndex })
-      // Re-fetch to update local state
       const updated = await getUserProfile(userProfile.uid)
       if (updated) setProfile(updated)
     }
@@ -144,6 +145,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logOut = async () => {
+    if (isDemo) {
+      exitDemo()
+      return
+    }
     await signOut()
     setUser(null)
     setProfile(null)
@@ -152,16 +157,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshProfile = async () => {
+    if (isDemo) return
     if (user) {
       await loadProfile(user)
     }
   }
 
-  const profileComplete =
+  const enterDemo = () => {
+    setIsDemo(true)
+    setDemoMode(true)
+    setProfile(DEMO_PROFILE)
+    setLoading(false)
+  }
+
+  const exitDemo = () => {
+    setIsDemo(false)
+    setDemoMode(false)
+    setProfile(null)
+  }
+
+  const profileComplete = isDemo || (
     !!profile &&
     !!profile.displayName &&
     profile.venmoHandle !== '' &&
     profile.handicapIndex !== 0
+  )
 
   return (
     <AuthContext.Provider
@@ -172,9 +192,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profileComplete,
         inviteRequired,
         inviteError,
+        isDemo,
         signIn,
         logOut,
         refreshProfile,
+        enterDemo,
+        exitDemo,
       }}
     >
       {children}

@@ -6,14 +6,17 @@ import {
   subscribeToMonthRounds,
   getPlayerRoundsForMonth,
 } from '@/lib/firebase/firestore'
+import { useAuth } from '@/contexts/AuthContext'
+import { DEMO_PLAYER_ROUNDS, DEMO_ALL_ROUNDS } from '@/lib/demo/data'
 import type { Round } from '@/lib/types'
 
 export function usePlayerRounds(uid: string | undefined) {
+  const { isDemo } = useAuth()
   const [rounds, setRounds] = useState<Round[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!uid) {
+    if (isDemo || !uid) {
       setLoading(false)
       return
     }
@@ -23,8 +26,9 @@ export function usePlayerRounds(uid: string | undefined) {
       setLoading(false)
     })
     return unsub
-  }, [uid])
+  }, [uid, isDemo])
 
+  if (isDemo) return { rounds: DEMO_PLAYER_ROUNDS, loading: false }
   return { rounds, loading }
 }
 
@@ -32,11 +36,12 @@ export function useMonthRounds(
   seasonId: string | undefined,
   month: string
 ) {
+  const { isDemo } = useAuth()
   const [rounds, setRounds] = useState<Round[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!seasonId) {
+    if (isDemo || !seasonId) {
       setLoading(false)
       return
     }
@@ -46,8 +51,9 @@ export function useMonthRounds(
       setLoading(false)
     })
     return unsub
-  }, [seasonId, month])
+  }, [seasonId, month, isDemo])
 
+  if (isDemo) return { rounds: DEMO_ALL_ROUNDS.filter((r) => r.month === month), loading: false }
   return { rounds, loading }
 }
 
@@ -55,11 +61,12 @@ export function usePendingRoundsForPlayer(
   uid: string | undefined,
   month: string
 ) {
+  const { isDemo } = useAuth()
   const [pendingRounds, setPendingRounds] = useState<Round[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!uid) {
+    if (isDemo || !uid) {
       setLoading(false)
       return
     }
@@ -69,7 +76,8 @@ export function usePendingRoundsForPlayer(
         setPendingRounds(rounds.filter((r) => !r.isValid))
       })
       .finally(() => setLoading(false))
-  }, [uid, month])
+  }, [uid, month, isDemo])
 
+  if (isDemo) return { pendingRounds: DEMO_PLAYER_ROUNDS.filter((r) => !r.isValid && r.month === month), loading: false }
   return { pendingRounds, loading }
 }
