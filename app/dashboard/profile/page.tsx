@@ -14,13 +14,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { formatTimestamp } from '@/lib/utils/dates'
-import { User, Target, CreditCard, Calendar, QrCode, Trophy } from 'lucide-react'
+import { User, Target, CreditCard, Calendar, QrCode, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
+  ghinNumber: z.string().min(1, 'GHIN number is required'),
   handicapIndex: z
     .number({ invalid_type_error: 'Enter a valid number' })
     .min(0, 'Min 0')
@@ -36,19 +37,66 @@ type FormData = z.infer<typeof schema>
 export default function ProfilePage() {
   const { profile, user, refreshProfile } = useAuth()
   const [saving, setSaving] = useState(false)
+  const [refreshingGhin, setRefreshingGhin] = useState(false)
+  const [ghinError, setGhinError] = useState<string | null>(null)
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isDirty },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       displayName: profile?.displayName ?? '',
+      ghinNumber: profile?.ghinNumber ?? '',
       handicapIndex: profile?.handicapIndex ?? 0,
       venmoHandle: profile?.venmoHandle ?? '',
     },
   })
+
+  const ghinNumber = watch('ghinNumber')
+
+  const refreshHandicap = async () => {
+    if (!user || !ghinNumber.trim()) {
+      setGhinError('Enter your GHIN number first.')
+      return
+    }
+
+    setRefreshingGhin(true)
+    setGhinError(null)
+
+    try {
+      const res = await fetch('/api/ghin/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ghinNumber: ghinNumber.trim() }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setGhinError(data.error ?? 'Lookup failed.')
+        return
+      }
+
+      if (data.noHandicap || data.handicapIndex === null) {
+        setGhinError('GHIN shows "NH" (no established handicap). Update your handicap manually below.')
+        return
+      }
+
+      await updateUserProfile(user.uid, {
+        ghinNumber: ghinNumber.trim(),
+        handicapIndex: data.handicapIndex,
+      })
+      await refreshProfile()
+      toast.success(`Handicap updated to ${data.handicapIndex}`)
+    } catch {
+      setGhinError('Network error. Please try again.')
+    } finally {
+      setRefreshingGhin(false)
+    }
+  }
 
   const onSubmit = async (data: FormData) => {
     if (!user) return
@@ -56,6 +104,7 @@ export default function ProfilePage() {
     try {
       await updateUserProfile(user.uid, {
         displayName: data.displayName,
+        ghinNumber: data.ghinNumber.trim(),
         handicapIndex: data.handicapIndex,
         venmoHandle: data.venmoHandle,
       })
@@ -124,12 +173,60 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
+      {/* GHIN Handicap Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="w-4 h-4" />
+            GHIN Handicap
+          </CardTitle>
+          <CardDescription>
+            Your handicap is automatically pulled from GHIN on each sign-in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Current Handicap Index</p>
+              <p className="text-2xl font-bold text-green-700">
+                {profile?.handicapIndex ?? '—'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">GHIN #</p>
+              <p className="text-sm font-mono font-medium">
+                {profile?.ghinNumber || '—'}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={refreshHandicap}
+            disabled={refreshingGhin || !ghinNumber.trim()}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshingGhin ? 'animate-spin' : ''}`} />
+            {refreshingGhin ? 'Refreshing...' : 'Refresh Handicap from GHIN'}
+          </Button>
+
+          {ghinError && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span className="text-sm text-red-800">{ghinError}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Edit Form */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Edit Profile</CardTitle>
           <CardDescription>
-            Update your name, handicap, and Venmo handle
+            Update your name, GHIN number, and Venmo handle
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -148,6 +245,26 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="ghinNumber" className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-muted-foreground" />
+                GHIN Number
+              </Label>
+              <Input
+                id="ghinNumber"
+                placeholder="e.g. 1234567"
+                {...register('ghinNumber')}
+              />
+              <p className="text-xs text-muted-foreground">
+                Your GHIN member number for automatic handicap updates
+              </p>
+              {errors.ghinNumber && (
+                <p className="text-xs text-destructive">
+                  {errors.ghinNumber.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="handicapIndex" className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-muted-foreground" />
                 Handicap Index
@@ -160,6 +277,9 @@ export default function ProfilePage() {
                 max="54"
                 {...register('handicapIndex', { valueAsNumber: true })}
               />
+              <p className="text-xs text-muted-foreground">
+                Auto-updated from GHIN on sign-in. Edit manually if needed.
+              </p>
               {errors.handicapIndex && (
                 <p className="text-xs text-destructive">
                   {errors.handicapIndex.message}

@@ -9,7 +9,7 @@ import React, {
 } from 'react'
 import { User } from 'firebase/auth'
 import { onAuthChange, signInWithGoogle, signOut } from '@/lib/firebase/auth'
-import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore'
+import { getUserProfile, createUserProfile, updateUserProfile } from '@/lib/firebase/firestore'
 import { claimInvite } from '@/lib/firebase/invites'
 import type { UserProfile } from '@/lib/types'
 
@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: firebaseUser.email ?? '',
         photoURL: firebaseUser.photoURL ?? '',
         handicapIndex: 0,
+        ghinNumber: '',
         venmoHandle: '',
         qrCode: firebaseUser.uid,
         totalPoints: 0,
@@ -91,7 +92,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setInviteRequired(false)
     setInviteError(null)
     setProfile(userProfile)
+
+    // Silently refresh handicap from GHIN for users who have linked their number
+    if (userProfile?.ghinNumber) {
+      refreshHandicapFromGhin(userProfile).catch(() => {
+        // Non-critical — silently ignore GHIN lookup failures on login
+      })
+    }
   }, [])
+
+  const refreshHandicapFromGhin = async (userProfile: UserProfile) => {
+    const res = await fetch('/api/ghin/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ghinNumber: userProfile.ghinNumber }),
+    })
+
+    if (!res.ok) return
+
+    const data = await res.json()
+    const newIndex = data.handicapIndex
+
+    // Skip update if GHIN returned NH or null
+    if (data.noHandicap || newIndex === null) return
+
+    if (typeof newIndex === 'number' && newIndex !== userProfile.handicapIndex) {
+      await updateUserProfile(userProfile.uid, { handicapIndex: newIndex })
+      // Re-fetch to update local state
+      const updated = await getUserProfile(userProfile.uid)
+      if (updated) setProfile(updated)
+    }
+  }
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {

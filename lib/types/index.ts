@@ -7,6 +7,7 @@ export interface UserProfile {
   email: string
   photoURL: string
   handicapIndex: number
+  ghinNumber: string // GHIN member ID for automatic handicap lookup; '' if not linked
   venmoHandle: string
   qrCode: string // their uid encoded as QR
   memberSince: Timestamp
