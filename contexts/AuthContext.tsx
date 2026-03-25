@@ -175,6 +175,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       setUser(firebaseUser)
       if (firebaseUser) {
+        // Reset loading while we resolve the profile — prevents the
+        // invite page from redirecting before claim + profile creation.
+        setLoading(true)
         await loadProfile(firebaseUser)
       } else {
         setProfile(null)
@@ -185,9 +188,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfile])
 
   const signIn = async () => {
-    const firebaseUser = await signInWithGoogle()
-    setUser(firebaseUser)
-    await loadProfile(firebaseUser)
+    // Just authenticate — the onAuthChange listener handles loadProfile.
+    // Calling loadProfile here too caused a race condition where two
+    // concurrent calls both tried to claim the same invite token.
+    await signInWithGoogle()
   }
 
   const logOut = async () => {

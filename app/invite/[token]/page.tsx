@@ -34,19 +34,28 @@ function ExpiryLabel({ invite }: { invite: Invite }) {
 export default function InvitePage() {
   const params = useParams()
   const router = useRouter()
-  const { user, signIn, loading: authLoading } = useAuth()
+  const { user, signIn, loading: authLoading, inviteError } = useAuth()
   const token = params.token as string
 
   const [state, setState] = useState<PageState>('loading')
   const [invite, setInvite] = useState<Invite | null>(null)
   const [signingIn, setSigningIn] = useState(false)
 
-  // If user is already logged in, redirect to dashboard
+  // If user is logged in AND auth is no longer loading (profile resolved),
+  // redirect to dashboard.
   useEffect(() => {
     if (!authLoading && user) {
       router.replace('/dashboard')
     }
   }, [user, authLoading, router])
+
+  // Reset signing-in spinner if auth failed asynchronously
+  // (e.g. loadProfile failed and signed the user out)
+  useEffect(() => {
+    if (signingIn && inviteError) {
+      setSigningIn(false)
+    }
+  }, [signingIn, inviteError])
 
   // Validate the token (no auth required)
   useEffect(() => {
