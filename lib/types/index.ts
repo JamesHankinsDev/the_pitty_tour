@@ -75,6 +75,8 @@ export interface Round {
   attestations: Attestation[]
   isValid: boolean      // true when 1+ attestation from a different member
   submittedAt: Timestamp
+  sandSaves: number    // holes where a bunker shot was taken and par+ was made
+  par3Pars: number     // par-3 holes played at par or better
   notes: string
   // Admin override
   adminOverride?: boolean

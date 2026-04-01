@@ -108,11 +108,26 @@ export function RoundCard({ round, compact = false }: RoundCardProps) {
           </div>
         )}
 
-        {/* Course details */}
+        {/* Course details & skills */}
         {!compact && (
-          <div className="mt-2 pt-2 border-t flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="mt-2 pt-2 border-t flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
             <span>Rating: {round.courseRating}</span>
             <span>Slope: {round.slopeRating}</span>
+            {(round.sandSaves > 0 || round.par3Pars > 0) && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                {round.sandSaves > 0 && (
+                  <span className="text-yellow-700 font-medium">
+                    {round.sandSaves} Sand Save{round.sandSaves !== 1 ? 's' : ''}
+                  </span>
+                )}
+                {round.par3Pars > 0 && (
+                  <span className="text-green-700 font-medium">
+                    {round.par3Pars} Par-3 Par{round.par3Pars !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </>
+            )}
           </div>
         )}
 

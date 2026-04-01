@@ -45,6 +45,16 @@ const schema = z.object({
     .number({ invalid_type_error: 'Enter gross score' })
     .min(55, 'Score too low')
     .max(200, 'Score too high'),
+  sandSaves: z
+    .number({ invalid_type_error: 'Enter a number' })
+    .min(0, 'Cannot be negative')
+    .max(18, 'Max 18')
+    .default(0),
+  par3Pars: z
+    .number({ invalid_type_error: 'Enter a number' })
+    .min(0, 'Cannot be negative')
+    .max(6, 'Max 6')
+    .default(0),
   notes: z.string().max(300, 'Max 300 characters').optional(),
 })
 
@@ -71,6 +81,8 @@ export default function SubmitRoundPage() {
       courseRating: 72.0,
       slopeRating: 113,
       grossScore: undefined,
+      sandSaves: 0,
+      par3Pars: 0,
     },
   })
 
@@ -115,6 +127,8 @@ export default function SubmitRoundPage() {
         grossScore: data.grossScore,
         netScore,
         differentialScore: differential,
+        sandSaves: data.sandSaves,
+        par3Pars: data.par3Pars,
         notes: data.notes ?? '',
       })
       setSubmitted(true)
@@ -299,6 +313,59 @@ export default function SubmitRoundPage() {
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Skill Bonuses */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Tour Book Skills</CardTitle>
+            <CardDescription>
+              Record sand saves and par-3 pars for skill bonus pools.
+              Must be verified by your marker in the Tour Book.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sandSaves">Sand Saves</Label>
+                <Input
+                  id="sandSaves"
+                  type="number"
+                  min={0}
+                  max={18}
+                  placeholder="0"
+                  {...register('sandSaves', { valueAsNumber: true })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Bunker shot + par or better
+                </p>
+                {errors.sandSaves && (
+                  <p className="text-xs text-destructive">
+                    {errors.sandSaves.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="par3Pars">Par-3 Pars (or Better)</Label>
+                <Input
+                  id="par3Pars"
+                  type="number"
+                  min={0}
+                  max={6}
+                  placeholder="0"
+                  {...register('par3Pars', { valueAsNumber: true })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Par-3 holes at par or better
+                </p>
+                {errors.par3Pars && (
+                  <p className="text-xs text-destructive">
+                    {errors.par3Pars.message}
+                  </p>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
