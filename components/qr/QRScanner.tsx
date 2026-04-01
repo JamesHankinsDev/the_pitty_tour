@@ -18,6 +18,10 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scannedRef = useRef(false)
 
+  // Keep a ref to onScan so the scanner callback always calls the latest version
+  const onScanRef = useRef(onScan)
+  onScanRef.current = onScan
+
   const stopScanner = async () => {
     if (scannerRef.current?.isScanning) {
       try {
@@ -64,9 +68,16 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
         (decodedText) => {
           if (scannedRef.current) return
           scannedRef.current = true
-          stopScanner().then(() => {
-            onScan(decodedText)
-          })
+
+          // Fire the callback immediately — don't gate it behind stop().
+          // Stopping from within the scan callback can deadlock html5-qrcode.
+          onScanRef.current(decodedText)
+
+          // Stop the scanner in the background (deferred so we're outside
+          // html5-qrcode's frame processing loop)
+          setTimeout(() => {
+            stopScanner()
+          }, 0)
         },
         () => {
           // QR not found yet — ignore
@@ -116,11 +127,19 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
           </div>
         )}
 
-        {/* QR reader mounts here */}
+        {/* QR reader mounts here — use invisible positioning instead of
+            display:none so html5-qrcode can measure the container while
+            the camera is initializing */}
         <div
           id="qr-reader-container"
           ref={containerRef}
-          className={`w-full rounded-xl overflow-hidden ${!scanning ? 'hidden' : ''}`}
+          className={`w-full rounded-xl overflow-hidden ${
+            scanning
+              ? ''
+              : loading
+              ? 'absolute inset-0 opacity-0 pointer-events-none'
+              : 'hidden'
+          }`}
         />
 
         {/* Scanning overlay */}
@@ -163,7 +182,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
 
       {scanning && (
         <p className="text-sm text-muted-foreground text-center">
-          Point your camera at the player's QR code
+          Point your camera at the player&apos;s QR code
         </p>
       )}
 
