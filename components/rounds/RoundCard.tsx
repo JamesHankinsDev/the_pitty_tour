@@ -4,7 +4,7 @@ import type { Round } from '@/lib/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatTimestamp, formatMonthKey } from '@/lib/utils/dates'
-import { CheckCircle2, Clock, MapPin, User } from 'lucide-react'
+import { CheckCircle2, Clock, MapPin, User, Trophy, XCircle } from 'lucide-react'
 
 interface RoundCardProps {
   round: Round
@@ -78,11 +78,21 @@ export function RoundCard({ round, compact = false }: RoundCardProps) {
                 Valid
               </Badge>
             ) : round.adminOverride ? (
-              <Badge variant="success">Admin ✓</Badge>
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <XCircle className="w-3 h-3" />
+                Invalidated
+              </Badge>
             ) : (
               <Badge variant="pending" className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 Pending
+              </Badge>
+            )}
+
+            {round.selectedForScoring && (
+              <Badge className="bg-green-700 text-white text-xs flex items-center gap-1">
+                <Trophy className="w-3 h-3" />
+                Submitted
               </Badge>
             )}
 

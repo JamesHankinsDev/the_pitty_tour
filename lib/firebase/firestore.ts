@@ -192,7 +192,7 @@ export async function getSeasonRegistrations(
 
 // ─── Round Operations ─────────────────────────────────────────────────────────
 export async function submitRound(
-  data: Omit<Round, 'id' | 'submittedAt' | 'attestations' | 'isValid'>
+  data: Omit<Round, 'id' | 'submittedAt' | 'attestations' | 'isValid' | 'selectedForScoring'>
 ): Promise<string> {
   if (guardDemoWrite('Submitting rounds')) return '';
   const ref = await addDoc(collection(db, COLLECTIONS.ROUNDS), {
@@ -200,9 +200,40 @@ export async function submitRound(
     submittedAt: serverTimestamp(),
     attestations: [],
     isValid: false,
+    selectedForScoring: false,
     notes: data.notes ?? '',
   })
   return ref.id
+}
+
+/**
+ * Select a round for monthly scoring. Deselects any previously selected
+ * round for the same player+month.
+ */
+export async function selectRoundForScoring(
+  roundId: string,
+  uid: string,
+  month: string
+): Promise<void> {
+  if (guardDemoWrite('Selecting rounds')) return;
+
+  // Deselect any currently selected round for this player+month
+  const q = query(
+    collection(db, COLLECTIONS.ROUNDS),
+    where('uid', '==', uid),
+    where('month', '==', month)
+  )
+  const snap = await getDocs(q)
+
+  const batch = writeBatch(db)
+  for (const d of snap.docs) {
+    if (d.id === roundId) {
+      batch.update(d.ref, { selectedForScoring: true })
+    } else if (d.data().selectedForScoring) {
+      batch.update(d.ref, { selectedForScoring: false })
+    }
+  }
+  await batch.commit()
 }
 
 export async function getRoundById(id: string): Promise<Round | null> {

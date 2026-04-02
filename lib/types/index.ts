@@ -77,6 +77,7 @@ export interface Round {
   submittedAt: Timestamp
   sandSaves: number    // holes where a bunker shot was taken and par+ was made
   par3Pars: number     // par-3 holes played at par or better
+  selectedForScoring: boolean // player's chosen round for monthly scoring
   notes: string
   // Admin override
   adminOverride?: boolean

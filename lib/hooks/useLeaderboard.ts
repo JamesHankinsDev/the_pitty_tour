@@ -7,6 +7,7 @@ import {
   getAllUsers,
 } from '@/lib/firebase/firestore'
 import { calculateMonthlyPoints } from '@/lib/utils/scoring'
+import { isPastMonth } from '@/lib/utils/dates'
 import { useAuth } from '@/contexts/AuthContext'
 import { DEMO_LEADERBOARD } from '@/lib/demo/data'
 import type { Round, Points, LeaderboardEntry, UserProfile } from '@/lib/types'
@@ -38,21 +39,38 @@ export function useMonthLeaderboard(
     return unsub
   }, [seasonId, month, isDemo])
 
+  // Is this month finalized (past) or still in progress?
+  const isOfficial = useMemo(() => isPastMonth(month), [month])
+
   const { grossStandings, netStandings } = useMemo(() => {
     if (isDemo) return DEMO_LEADERBOARD
 
     const validRounds = rounds.filter((r) => r.isValid)
 
-    // Best round per player
-    const bestByPlayer = new Map<string, Round>()
+    // Pick one round per player:
+    // - Past months (official): use the player's selectedForScoring round,
+    //   falling back to best gross if none selected
+    // - Current/future months (unofficial): use best gross as a running preview
+    const roundByPlayer = new Map<string, Round>()
     for (const round of validRounds) {
-      const existing = bestByPlayer.get(round.uid)
-      if (!existing || round.grossScore < existing.grossScore) {
-        bestByPlayer.set(round.uid, round)
+      const existing = roundByPlayer.get(round.uid)
+
+      if (isOfficial) {
+        // Prefer the explicitly selected round
+        if (round.selectedForScoring) {
+          roundByPlayer.set(round.uid, round)
+        } else if (!existing || (!existing.selectedForScoring && round.grossScore < existing.grossScore)) {
+          roundByPlayer.set(round.uid, round)
+        }
+      } else {
+        // Unofficial: always take the best gross score
+        if (!existing || round.grossScore < existing.grossScore) {
+          roundByPlayer.set(round.uid, round)
+        }
       }
     }
 
-    const playerRounds = Array.from(bestByPlayer.values())
+    const playerRounds = Array.from(roundByPlayer.values())
     const userMap = new Map(users.map((u) => [u.uid, u]))
 
     const grossSorted = [...playerRounds].sort(
@@ -83,10 +101,10 @@ export function useMonthLeaderboard(
       grossStandings: grossSorted.map((r, i) => makeEntry(r, i + 1)),
       netStandings: netSorted.map((r, i) => makeEntry(r, i + 1)),
     }
-  }, [rounds, users, isDemo])
+  }, [rounds, users, isDemo, isOfficial])
 
-  if (isDemo) return { grossStandings: DEMO_LEADERBOARD.grossStandings, netStandings: DEMO_LEADERBOARD.netStandings, loading: false }
-  return { grossStandings, netStandings, loading }
+  if (isDemo) return { grossStandings: DEMO_LEADERBOARD.grossStandings, netStandings: DEMO_LEADERBOARD.netStandings, loading: false, isOfficial: false }
+  return { grossStandings, netStandings, loading, isOfficial }
 }
 
 export function useSeasonLeaderboard(seasonId: string | undefined) {

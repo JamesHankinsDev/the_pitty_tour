@@ -2,13 +2,18 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { usePlayerRounds } from '@/lib/hooks/useRounds'
+import { selectRoundForScoring } from '@/lib/firebase/firestore'
 import { RoundCard } from '@/components/rounds/RoundCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ClipboardList, Plus, Trophy } from 'lucide-react'
+import { ClipboardList, Plus, Trophy, CheckCircle2, Info } from 'lucide-react'
 import Link from 'next/link'
-import { formatMonthKey } from '@/lib/utils/dates'
+import { formatMonthKey, getCurrentMonthKey, isPastMonth } from '@/lib/utils/dates'
+import { toast } from 'sonner'
+import { useState } from 'react'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,9 +41,11 @@ function EmptyRounds() {
 export default function MyRoundsPage() {
   const { profile } = useAuth()
   const { rounds, loading } = usePlayerRounds(profile?.uid)
+  const [selecting, setSelecting] = useState<string | null>(null)
 
   const validRounds = rounds.filter((r) => r.isValid)
-  const pendingRounds = rounds.filter((r) => !r.isValid)
+  const pendingRounds = rounds.filter((r) => !r.isValid && !r.adminOverride)
+  const invalidRounds = rounds.filter((r) => !r.isValid && r.adminOverride)
 
   // Group by month
   const roundsByMonth = rounds.reduce(
@@ -52,6 +59,19 @@ export default function MyRoundsPage() {
 
   const sortedMonths = Object.keys(roundsByMonth).sort().reverse()
 
+  const handleSelectForScoring = async (roundId: string, month: string) => {
+    if (!profile) return
+    setSelecting(roundId)
+    try {
+      await selectRoundForScoring(roundId, profile.uid, month)
+      toast.success('Round selected for monthly scoring!')
+    } catch {
+      toast.error('Failed to select round.')
+    } finally {
+      setSelecting(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-4 lg:p-8 space-y-4">
@@ -62,6 +82,8 @@ export default function MyRoundsPage() {
       </div>
     )
   }
+
+  const currentMonth = getCurrentMonthKey()
 
   return (
     <div className="p-4 lg:p-8 max-w-2xl mx-auto space-y-6">
@@ -97,24 +119,78 @@ export default function MyRoundsPage() {
             <TabsTrigger value="pending" className="flex-1">
               Pending ({pendingRounds.length})
             </TabsTrigger>
+            {invalidRounds.length > 0 && (
+              <TabsTrigger value="invalid" className="flex-1">
+                Invalid ({invalidRounds.length})
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="all" className="space-y-4 mt-4">
-            {sortedMonths.map((month) => (
-              <div key={month}>
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-sm">
-                    {formatMonthKey(month)}
-                  </h3>
-                  <div className="flex-1 h-px bg-border" />
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-3 flex gap-2">
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-800">
+                  Select one valid round per month for scoring. Your selected round
+                  will count toward the monthly leaderboard and payouts.
+                </p>
+              </CardContent>
+            </Card>
+
+            {sortedMonths.map((month) => {
+              const monthRounds = roundsByMonth[month]
+              const validInMonth = monthRounds.filter((r) => r.isValid)
+              const hasSelection = monthRounds.some((r) => r.selectedForScoring)
+              const monthClosed = isPastMonth(month)
+
+              return (
+                <div key={month}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-semibold text-sm">
+                      {formatMonthKey(month)}
+                    </h3>
+                    {hasSelection && (
+                      <Badge variant="success" className="text-xs">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Submitted
+                      </Badge>
+                    )}
+                    {!hasSelection && validInMonth.length > 0 && (
+                      <Badge variant="warning" className="text-xs">
+                        Select a round
+                      </Badge>
+                    )}
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div className="space-y-3">
+                    {monthRounds.map((round) => (
+                      <div key={round.id}>
+                        <RoundCard round={round} />
+                        {/* Show select button for valid rounds that aren't already selected */}
+                        {round.isValid && !round.selectedForScoring && !monthClosed && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-1.5 text-green-700 border-green-200 hover:bg-green-50"
+                            onClick={() => handleSelectForScoring(round.id, round.month)}
+                            disabled={selecting === round.id}
+                          >
+                            {selecting === round.id ? (
+                              'Selecting...'
+                            ) : (
+                              <>
+                                <Trophy className="w-3.5 h-3.5 mr-1.5" />
+                                Select for {formatMonthKey(month)} Scoring
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  {roundsByMonth[month].map((round) => (
-                    <RoundCard key={round.id} round={round} />
-                  ))}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </TabsContent>
 
           <TabsContent value="valid" className="space-y-3 mt-4">
@@ -124,7 +200,27 @@ export default function MyRoundsPage() {
               </p>
             ) : (
               validRounds.map((round) => (
-                <RoundCard key={round.id} round={round} />
+                <div key={round.id}>
+                  <RoundCard round={round} />
+                  {!round.selectedForScoring && !isPastMonth(round.month) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-1.5 text-green-700 border-green-200 hover:bg-green-50"
+                      onClick={() => handleSelectForScoring(round.id, round.month)}
+                      disabled={selecting === round.id}
+                    >
+                      {selecting === round.id ? (
+                        'Selecting...'
+                      ) : (
+                        <>
+                          <Trophy className="w-3.5 h-3.5 mr-1.5" />
+                          Select for Scoring
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               ))
             )}
           </TabsContent>
@@ -149,6 +245,18 @@ export default function MyRoundsPage() {
               </>
             )}
           </TabsContent>
+
+          {invalidRounds.length > 0 && (
+            <TabsContent value="invalid" className="space-y-3 mt-4">
+              <p className="text-sm text-muted-foreground bg-red-50 p-3 rounded-lg">
+                These rounds were invalidated by an admin and will not count
+                toward scoring.
+              </p>
+              {invalidRounds.map((round) => (
+                <RoundCard key={round.id} round={round} />
+              ))}
+            </TabsContent>
+          )}
         </Tabs>
       )}
     </div>

@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { BarChart3, Trophy, TrendingUp } from 'lucide-react'
+import { BarChart3, Trophy, TrendingUp, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { LeaderboardEntry } from '@/lib/types'
 
@@ -121,7 +121,7 @@ export default function LeaderboardPage() {
   const currentMonth = getCurrentMonthKey()
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
 
-  const { grossStandings: monthGross, netStandings: monthNet, loading: monthLoading } =
+  const { grossStandings: monthGross, netStandings: monthNet, loading: monthLoading, isOfficial } =
     useMonthLeaderboard(season?.id, selectedMonth)
 
   const { grossStandings: seasonGross, netStandings: seasonNet, loading: seasonLoading } =
@@ -170,7 +170,22 @@ export default function LeaderboardPage() {
                 ))}
               </SelectContent>
             </Select>
+            {isOfficial ? (
+              <Badge variant="success" className="shrink-0">Official</Badge>
+            ) : (
+              <Badge variant="warning" className="shrink-0 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Unofficial
+              </Badge>
+            )}
           </div>
+
+          {!isOfficial && (
+            <p className="text-xs text-muted-foreground bg-yellow-50 border border-yellow-100 rounded-lg p-2.5">
+              Standings are unofficial until the month closes. Showing each player&apos;s
+              best round as a running preview. Players select their scoring round before month end.
+            </p>
+          )}
 
           <Tabs defaultValue="gross">
             <TabsList className="w-full">

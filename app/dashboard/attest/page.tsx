@@ -234,6 +234,23 @@ export default function AttestPage() {
                 {playerRounds.map((round) => (
                   <div key={round.id} className="relative">
                     <RoundCard round={round} />
+
+                    {/* Skill stats — prominent for attestor verification */}
+                    {(round.sandSaves > 0 || round.par3Pars > 0) && (
+                      <div className="flex gap-3 mt-1 px-1">
+                        {round.sandSaves > 0 && (
+                          <span className="text-xs font-medium text-yellow-700 bg-yellow-50 px-2 py-1 rounded">
+                            {round.sandSaves} Sand Save{round.sandSaves !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {round.par3Pars > 0 && (
+                          <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded">
+                            {round.par3Pars} Par-3 Par{round.par3Pars !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="mt-2">
                       <Button
                         variant="green"
