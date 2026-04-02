@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils/cn";
+import { usePlayerStats } from "@/lib/hooks/usePlayerStats";
 import {
   LayoutDashboard,
   User,
@@ -15,6 +16,8 @@ import {
   ScanLine,
   Shield,
   LogOut,
+  TrendingUp,
+  Hash,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -35,6 +38,7 @@ const adminItems = [{ href: "/admin", label: "Admin", icon: Shield }];
 export function DashboardNav() {
   const pathname = usePathname();
   const { profile, logOut, isDemo } = useAuth();
+  const { rank, totalPoints, totalEarnings } = usePlayerStats();
 
   return (
     <nav className="flex flex-col h-full">
@@ -105,9 +109,9 @@ export function DashboardNav() {
         )}
       </div>
 
-      {/* User info + logout */}
+      {/* User info + stats + logout */}
       <div className="border-t p-4">
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-2">
           <Avatar className="w-8 h-8">
             <AvatarImage src={profile?.photoURL} />
             <AvatarFallback>{profile?.displayName?.[0] ?? "U"}</AvatarFallback>
@@ -121,6 +125,27 @@ export function DashboardNav() {
             </p>
           </div>
         </div>
+
+        {/* Player stats */}
+        <div className="grid grid-cols-3 gap-1 mb-3 p-2 bg-muted/50 rounded-lg">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Rank</p>
+            <p className="text-sm font-bold">{rank ?? "—"}</p>
+          </div>
+          <div className="text-center border-x border-border">
+            <p className="text-xs text-muted-foreground">Points</p>
+            <p className="text-sm font-bold text-green-700">
+              {totalPoints}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Earned</p>
+            <p className="text-sm font-bold text-green-700">
+              ${totalEarnings}
+            </p>
+          </div>
+        </div>
+
         <Button variant="outline" size="sm" className="w-full" onClick={logOut}>
           <LogOut className="w-4 h-4 mr-2" />
           {isDemo ? 'Exit Demo' : 'Sign Out'}

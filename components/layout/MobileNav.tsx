@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils/cn'
+import { usePlayerStats } from '@/lib/hooks/usePlayerStats'
 import {
   LayoutDashboard,
   Flag,
@@ -45,6 +46,7 @@ const menuItems = [
 export function MobileNav() {
   const pathname = usePathname()
   const { profile, logOut, isDemo } = useAuth()
+  const { rank, totalPoints, totalEarnings } = usePlayerStats()
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -130,7 +132,7 @@ export function MobileNav() {
           </div>
 
           <div className="border-t p-4">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-3 mb-2">
               <Avatar>
                 <AvatarImage src={profile?.photoURL} />
                 <AvatarFallback>{profile?.displayName?.[0] ?? 'U'}</AvatarFallback>
@@ -142,6 +144,27 @@ export function MobileNav() {
                 </p>
               </div>
             </div>
+
+            {/* Player stats */}
+            <div className="grid grid-cols-3 gap-1 mb-3 p-2.5 bg-muted/50 rounded-lg">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Rank</p>
+                <p className="text-sm font-bold">{rank ?? '—'}</p>
+              </div>
+              <div className="text-center border-x border-border">
+                <p className="text-xs text-muted-foreground">Points</p>
+                <p className="text-sm font-bold text-green-700">
+                  {totalPoints}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">Earned</p>
+                <p className="text-sm font-bold text-green-700">
+                  ${totalEarnings}
+                </p>
+              </div>
+            </div>
+
             <Button
               variant="outline"
               className="w-full"
