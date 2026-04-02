@@ -14,6 +14,47 @@ export interface UserProfile {
   totalPoints: number
   isAdmin: boolean
   inviteToken: string // token used at registration; '' for seed/legacy users
+  lookingForPartner?: boolean        // true = actively seeking a playing partner
+  lookingForPartnerNote?: string     // optional context e.g. "Saturday AM at Bethpage"
+  lookingForPartnerAt?: Timestamp    // when the flag was set
+}
+
+// ─── Message Board ──────────────────────────────────────────────────────────
+export interface Message {
+  id: string
+  uid: string
+  displayName: string
+  photoURL: string
+  text: string
+  createdAt: Timestamp
+  type: 'chat' | 'lfg'  // lfg = looking-for-group announcement
+}
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+export type NotificationType =
+  | 'round_submitted'    // a player submitted a new round
+  | 'round_attested'     // your round was attested
+  | 'round_validated'    // your round is now valid
+  | 'lfg'               // someone is looking for a partner
+  | 'leaderboard_change' // your rank changed
+  | 'admin'             // admin announcement
+
+export interface Notification {
+  id: string
+  recipientUid: string    // specific uid, or 'all' for broadcast
+  type: NotificationType
+  title: string
+  body: string
+  link?: string           // optional deep link, e.g. '/dashboard/leaderboard'
+  actorUid?: string       // who triggered it
+  actorName?: string
+  actorPhotoURL?: string
+  createdAt: Timestamp
+}
+
+/** Per-user read cursor — stored in notificationReads/{uid} */
+export interface NotificationReadCursor {
+  lastReadAt: Timestamp
 }
 
 // ─── Invite ───────────────────────────────────────────────────────────────────

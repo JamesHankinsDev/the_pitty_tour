@@ -57,19 +57,29 @@ service cloud.firestore {
       // 1. No edits allowed once any attestation exists (unless admin)
       // 2. Attestors can add themselves (not the round owner, not already attested)
       // 3. Admins can override anything
+      // Attestation: another player adds their attestation
       allow update: if isAdmin() ||
         (isAuthenticated() &&
-          // Cannot edit own round
           resource.data.uid != request.auth.uid &&
-          // Can only add attestations, not change score fields
           request.resource.data.uid == resource.data.uid &&
           request.resource.data.grossScore == resource.data.grossScore &&
           request.resource.data.netScore == resource.data.netScore &&
           request.resource.data.courseName == resource.data.courseName &&
           request.resource.data.slopeRating == resource.data.slopeRating &&
           request.resource.data.courseRating == resource.data.courseRating &&
-          // New attestation array must be one larger
-          request.resource.data.attestations.size() == resource.data.attestations.size() + 1);
+          request.resource.data.attestations.size() == resource.data.attestations.size() + 1)
+        ||
+        // Round selection: owner can toggle selectedForScoring on their own round
+        (isAuthenticated() &&
+          resource.data.uid == request.auth.uid &&
+          request.resource.data.uid == resource.data.uid &&
+          request.resource.data.grossScore == resource.data.grossScore &&
+          request.resource.data.netScore == resource.data.netScore &&
+          request.resource.data.courseName == resource.data.courseName &&
+          request.resource.data.slopeRating == resource.data.slopeRating &&
+          request.resource.data.courseRating == resource.data.courseRating &&
+          request.resource.data.attestations == resource.data.attestations &&
+          request.resource.data.isValid == resource.data.isValid);
 
       allow delete: if isAdmin();
     }
@@ -79,6 +89,35 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Points are calculated server-side (or by admin function)
       allow write: if isAdmin();
+    }
+
+    // ─── Notifications ────────────────────────────────────────────────────
+    match /notifications/{notifId} {
+      // Users can only read their own notifications
+      allow read: if isAuthenticated()
+        && resource.data.recipientUid == request.auth.uid;
+      // Any authenticated user can create (triggers send on behalf of actor)
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      // Recipient or admin can dismiss
+      allow delete: if isAdmin()
+        || (isAuthenticated() && resource.data.recipientUid == request.auth.uid);
+    }
+
+    match /notificationReads/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ─── Messages ─────────────────────────────────────────────────────────
+    match /messages/{messageId} {
+      allow read: if isAuthenticated();
+      // Any authenticated user can post
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid;
+      // Author or admin can delete
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
+      // No edits
+      allow update: if false;
     }
 
     // ─── Invites ──────────────────────────────────────────────────────────

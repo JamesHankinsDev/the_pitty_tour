@@ -42,6 +42,9 @@ import type {
   Round,
   Points,
   Attestation,
+  Message,
+  Notification,
+  NotificationType,
 } from '../types'
 
 // ─── Collections ─────────────────────────────────────────────────────────────
@@ -51,6 +54,9 @@ export const COLLECTIONS = {
   REGISTRATIONS: 'registrations',
   ROUNDS: 'rounds',
   POINTS: 'points',
+  MESSAGES: 'messages',
+  NOTIFICATIONS: 'notifications',
+  NOTIFICATION_READS: 'notificationReads',
 } as const
 
 // ─── User Operations ─────────────────────────────────────────────────────────
@@ -414,5 +420,178 @@ export function subscribeToSeasonPoints(
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => d.data() as Points))
+  })
+}
+
+// ─── Message Board ──────────────────────────────────────────────────────────
+
+export async function sendMessage(
+  uid: string,
+  displayName: string,
+  photoURL: string,
+  text: string,
+  type: 'chat' | 'lfg' = 'chat'
+): Promise<void> {
+  if (guardDemoWrite('Sending messages')) return
+  await addDoc(collection(db, COLLECTIONS.MESSAGES), {
+    uid,
+    displayName,
+    photoURL,
+    text: text.trim(),
+    type,
+    createdAt: serverTimestamp(),
+  })
+}
+
+export function subscribeToMessages(
+  callback: (messages: Message[]) => void,
+  messageLimit = 50
+) {
+  const q = query(
+    collection(db, COLLECTIONS.MESSAGES),
+    orderBy('createdAt', 'desc'),
+    limit(messageLimit)
+  )
+  return onSnapshot(q, (snap) => {
+    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message))
+    callback(msgs.reverse()) // oldest first for chat display
+  })
+}
+
+export async function deleteMessage(messageId: string): Promise<void> {
+  if (guardDemoWrite('Deleting messages')) return
+  await deleteDoc(doc(db, COLLECTIONS.MESSAGES, messageId))
+}
+
+// ─── Looking For Partner ────────────────────────────────────────────────────
+
+export async function setLookingForPartner(
+  uid: string,
+  looking: boolean,
+  note = ''
+): Promise<void> {
+  if (guardDemoWrite('Updating LFG status')) return
+  await updateDoc(doc(db, COLLECTIONS.USERS, uid), {
+    lookingForPartner: looking,
+    lookingForPartnerNote: looking ? note.trim() : '',
+    lookingForPartnerAt: looking ? serverTimestamp() : null,
+  })
+}
+
+export function subscribeToLFGPlayers(
+  callback: (players: UserProfile[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.USERS),
+    where('lookingForPartner', '==', true)
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => d.data() as UserProfile))
+  })
+}
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+/**
+ * Create a notification. Use recipientUid='all' for broadcasts.
+ */
+export async function createNotification(data: {
+  recipientUid: string
+  type: NotificationType
+  title: string
+  body: string
+  link?: string
+  actorUid?: string
+  actorName?: string
+  actorPhotoURL?: string
+}): Promise<void> {
+  if (guardDemoWrite('Notifications')) return
+  await addDoc(collection(db, COLLECTIONS.NOTIFICATIONS), {
+    ...data,
+    createdAt: serverTimestamp(),
+  })
+}
+
+/**
+ * Send a notification to every registered user (individual docs, not broadcast).
+ * This ensures per-user read tracking works cleanly.
+ */
+export async function notifyAllPlayers(
+  data: {
+    type: NotificationType
+    title: string
+    body: string
+    link?: string
+    actorUid?: string
+    actorName?: string
+    actorPhotoURL?: string
+  },
+  excludeUid?: string
+): Promise<void> {
+  if (guardDemoWrite('Notifications')) return
+  const usersSnap = await getDocs(collection(db, COLLECTIONS.USERS))
+  const batch = writeBatch(db)
+  for (const userDoc of usersSnap.docs) {
+    const uid = userDoc.id
+    if (uid === excludeUid) continue
+    const ref = doc(collection(db, COLLECTIONS.NOTIFICATIONS))
+    batch.set(ref, {
+      ...data,
+      recipientUid: uid,
+      createdAt: Timestamp.now(),
+    })
+  }
+  await batch.commit()
+}
+
+/**
+ * Subscribe to notifications for a specific user.
+ */
+export function subscribeToNotifications(
+  uid: string,
+  callback: (notifications: Notification[]) => void,
+  notifLimit = 30
+) {
+  const q = query(
+    collection(db, COLLECTIONS.NOTIFICATIONS),
+    where('recipientUid', '==', uid),
+    orderBy('createdAt', 'desc'),
+    limit(notifLimit)
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification)))
+  })
+}
+
+/**
+ * Mark all notifications as read by updating the user's read cursor.
+ */
+export async function markNotificationsRead(uid: string): Promise<void> {
+  if (guardDemoWrite('Marking notifications read')) return
+  await setDoc(doc(db, COLLECTIONS.NOTIFICATION_READS, uid), {
+    lastReadAt: serverTimestamp(),
+  })
+}
+
+export async function dismissNotification(notifId: string): Promise<void> {
+  if (guardDemoWrite('Dismissing notification')) return
+  await deleteDoc(doc(db, COLLECTIONS.NOTIFICATIONS, notifId))
+}
+
+/**
+ * Subscribe to the user's read cursor.
+ */
+export function subscribeToReadCursor(
+  uid: string,
+  callback: (lastReadAt: Date | null) => void
+) {
+  return onSnapshot(doc(db, COLLECTIONS.NOTIFICATION_READS, uid), (snap) => {
+    if (snap.exists()) {
+      const data = snap.data()
+      const ts = data.lastReadAt as Timestamp | null
+      callback(ts ? ts.toDate() : null)
+    } else {
+      callback(null)
+    }
   })
 }

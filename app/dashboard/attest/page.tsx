@@ -7,6 +7,7 @@ import {
   getUserByUid,
   getPlayerRoundsForMonth,
   addAttestation,
+  createNotification,
 } from '@/lib/firebase/firestore'
 import { getCurrentMonthKey, formatMonthKey } from '@/lib/utils/dates'
 import { QRScanner } from '@/components/qr/QRScanner'
@@ -108,6 +109,18 @@ export default function AttestPage() {
 
       setStep('success')
       toast.success(`🎉 ${scannedPlayer?.displayName}'s round is now VALID!`)
+
+      // Notify the round owner their round was attested
+      createNotification({
+        recipientUid: round.uid,
+        type: 'round_attested',
+        title: 'Round Attested!',
+        body: `${profile.displayName} attested your round at ${round.courseName}. It's now valid!`,
+        link: '/dashboard/my-rounds',
+        actorUid: user.uid,
+        actorName: profile.displayName,
+        actorPhotoURL: profile.photoURL,
+      }).catch(() => {})
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Attestation failed.'
       toast.error(msg)

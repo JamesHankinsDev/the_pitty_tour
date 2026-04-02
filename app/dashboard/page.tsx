@@ -1,8 +1,11 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
 import { usePlayerRounds } from '@/lib/hooks/useRounds'
+import { subscribeToLFGPlayers, createNotification } from '@/lib/firebase/firestore'
+import type { UserProfile } from '@/lib/types'
 import { getCurrentMonthKey, daysRemainingInMonth, formatMonthKey } from '@/lib/utils/dates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +21,8 @@ import {
   AlertCircle,
   Calendar,
   TrendingUp,
+  Users,
+  MessageSquare,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -62,11 +67,18 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { profile } = useAuth()
+  const { profile, user, isDemo } = useAuth()
   const { season, loading: seasonLoading } = useActiveSeason()
   const currentMonth = getCurrentMonthKey()
   const daysLeft = daysRemainingInMonth()
   const { rounds, loading: roundsLoading } = usePlayerRounds(profile?.uid)
+  const [lfgPlayers, setLfgPlayers] = useState<UserProfile[]>([])
+
+  useEffect(() => {
+    if (isDemo) return
+    const unsub = subscribeToLFGPlayers(setLfgPlayers)
+    return unsub
+  }, [isDemo])
 
   const currentMonthRounds = rounds.filter((r) => r.month === currentMonth)
   const hasValidRoundThisMonth = currentMonthRounds.some((r) => r.isValid)
@@ -227,6 +239,33 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* LFG Banner */}
+      {lfgPlayers.length > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-yellow-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm text-yellow-800">
+                    {lfgPlayers.length} player{lfgPlayers.length !== 1 ? 's' : ''} looking for a partner
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-0.5">
+                    {lfgPlayers.map((p) => p.displayName.split(' ')[0]).join(', ')}
+                  </p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild className="shrink-0">
+                <Link href="/dashboard/messages">
+                  <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                  View
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pending Attestations */}
       {pendingRounds.length > 0 && (
         <Card>
@@ -287,6 +326,28 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* TEMPORARY: Seed sample notifications — remove after testing */}
+      {profile?.isAdmin && user && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs text-muted-foreground"
+          onClick={async () => {
+            const samples = [
+              { type: 'round_submitted' as const, title: 'New Round Submitted', body: 'Jake Torres shot 82 at Winged Foot West', link: '/dashboard/leaderboard', actorName: 'Jake Torres' },
+              { type: 'round_attested' as const, title: 'Round Attested!', body: "Mike Sullivan attested your round at Bethpage Black. It's now valid!", link: '/dashboard/my-rounds', actorName: 'Mike Sullivan' },
+              { type: 'lfg' as const, title: 'Looking for Partner', body: 'Chris Park is looking for a partner: "Saturday AM at Bethpage"', link: '/dashboard/messages', actorName: 'Chris Park' },
+            ]
+            for (const s of samples) {
+              await createNotification({ recipientUid: user.uid, ...s, actorPhotoURL: '' })
+            }
+            alert('3 sample notifications created! Check the bell icon.')
+          }}
+        >
+          Seed Sample Notifications (Admin Only)
+        </Button>
       )}
     </div>
   )

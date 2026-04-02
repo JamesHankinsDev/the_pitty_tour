@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
-import { submitRound } from '@/lib/firebase/firestore'
+import { submitRound, notifyAllPlayers } from '@/lib/firebase/firestore'
 import {
   calculateNetScore,
   calculateDifferential,
@@ -132,7 +132,18 @@ export default function SubmitRoundPage() {
         notes: data.notes ?? '',
       })
       setSubmitted(true)
-      toast.success('Round submitted! Now get 2 partners to attest it.')
+      toast.success('Round submitted! Now get a partner to attest it.')
+
+      // Notify all players about the new round
+      notifyAllPlayers({
+        type: 'round_submitted',
+        title: 'New Round Submitted',
+        body: `${profile.displayName} shot ${data.grossScore} at ${data.courseName}`,
+        link: '/dashboard/leaderboard',
+        actorUid: user.uid,
+        actorName: profile.displayName,
+        actorPhotoURL: profile.photoURL,
+      }, user.uid).catch(() => {})
     } catch (err) {
       toast.error('Failed to submit round. Please try again.')
     } finally {
