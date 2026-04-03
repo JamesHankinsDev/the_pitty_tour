@@ -35,7 +35,7 @@ export function usePlayerStats(): PlayerStats {
       setLoading(false)
       return
     }
-    getAllUsers().then(setUsers)
+    getAllUsers().then(setUsers).catch(() => {})
   }, [isDemo, season])
 
   useEffect(() => {
@@ -44,11 +44,15 @@ export function usePlayerStats(): PlayerStats {
       return
     }
     setLoading(true)
-    const unsub = subscribeToSeasonPoints(season.id, (pts) => {
-      setAllPoints(pts)
+    try {
+      const unsub = subscribeToSeasonPoints(season.id, (pts) => {
+        setAllPoints(pts)
+        setLoading(false)
+      })
+      return unsub
+    } catch {
       setLoading(false)
-    })
-    return unsub
+    }
   }, [season, isDemo])
 
   const stats = useMemo<PlayerStats>(() => {

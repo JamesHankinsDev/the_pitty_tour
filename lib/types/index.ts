@@ -107,6 +107,7 @@ export interface Round {
   uid: string           // player who submitted
   seasonId: string
   month: string         // "2024-05"
+  holeCount: 9 | 18    // 9-hole rounds are for practice/handicap only, not tour events
   courseName: string
   courseRating: number
   slopeRating: number

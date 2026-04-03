@@ -455,6 +455,9 @@ export function subscribeToMessages(
   return onSnapshot(q, (snap) => {
     const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Message))
     callback(msgs.reverse()) // oldest first for chat display
+  }, (err) => {
+    console.warn('Messages subscription error:', err.message)
+    callback([])
   })
 }
 
@@ -487,6 +490,9 @@ export function subscribeToLFGPlayers(
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => d.data() as UserProfile))
+  }, (err) => {
+    console.warn('LFG subscription error:', err.message)
+    callback([])
   })
 }
 
@@ -560,6 +566,9 @@ export function subscribeToNotifications(
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification)))
+  }, (err) => {
+    console.warn('Notification subscription error:', err.message)
+    callback([])
   })
 }
 
@@ -593,5 +602,8 @@ export function subscribeToReadCursor(
     } else {
       callback(null)
     }
+  }, (err) => {
+    console.warn('Read cursor subscription error:', err.message)
+    callback(null)
   })
 }

@@ -167,7 +167,7 @@ export default function MyRoundsPage() {
                       <div key={round.id}>
                         <RoundCard round={round} />
                         {/* Show select button for valid rounds that aren't already selected */}
-                        {round.isValid && !round.selectedForScoring && !monthClosed && (
+                        {round.isValid && !round.selectedForScoring && !monthClosed && (round.holeCount ?? 18) === 18 && (
                           <Button
                             variant="outline"
                             size="sm"

@@ -43,6 +43,9 @@ export function RoundCard({ round, compact = false }: RoundCardProps) {
             <div className="flex items-center gap-1.5 mb-1">
               <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <p className="font-semibold text-sm truncate">{round.courseName}</p>
+              {(round.holeCount ?? 18) === 9 && (
+                <Badge className="bg-blue-100 text-blue-700 text-xs shrink-0">9H</Badge>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mb-2">
               {formatMonthKey(round.month)} · Submitted{' '}

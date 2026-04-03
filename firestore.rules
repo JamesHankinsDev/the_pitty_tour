@@ -3,150 +3,129 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─── Helper Functions ──────────────────────────────────────────────────
-    function isAuthenticated() {
+    // ─── Helpers ──────────────────────────────────────────────────────────
+
+    function authed() {
       return request.auth != null;
     }
 
-    function isOwner(uid) {
-      return isAuthenticated() && request.auth.uid == uid;
+    function isMe(uid) {
+      return authed() && request.auth.uid == uid;
     }
 
-    function isAdmin() {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    function admin() {
+      return authed()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
     // ─── Users ────────────────────────────────────────────────────────────
     match /users/{uid} {
-      // Anyone authenticated can read basic user info (for attestation lookup)
-      allow read: if isAuthenticated();
-
-      // Users can only write their own profile; admins can write any
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid) || isAdmin();
-
-      // No deletion
+      allow read: if authed();
+      allow create: if isMe(uid);
+      allow update: if isMe(uid) || admin();
       allow delete: if false;
     }
 
     // ─── Seasons ─────────────────────────────────────────────────────────
     match /seasons/{seasonId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read: if authed();
+      allow write: if admin();
     }
 
-    // ─── Registrations ────────────────────────────────────────────────────
+    // ─── Registrations ───────────────────────────────────────────────────
     match /registrations/{regId} {
-      allow read: if isAuthenticated();
-      // Only admins can create/update registrations (payment tracking)
-      allow write: if isAdmin();
+      allow read: if authed();
+      allow write: if admin();
     }
 
-    // ─── Rounds ───────────────────────────────────────────────────────────
+    // ─── Rounds ──────────────────────────────────────────────────────────
     match /rounds/{roundId} {
-      allow read: if isAuthenticated();
+      allow read: if authed();
 
-      // Players can only submit rounds for themselves
-      allow create: if isAuthenticated() &&
-        request.resource.data.uid == request.auth.uid &&
-        request.resource.data.attestations.size() == 0 &&
-        request.resource.data.isValid == false;
+      // Create: must be own round, empty attestations, not valid, not selected
+      allow create: if authed()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.attestations.size() == 0
+        && request.resource.data.isValid == false
+        && request.resource.data.selectedForScoring == false;
 
-      // Update rules:
-      // 1. No edits allowed once any attestation exists (unless admin)
-      // 2. Attestors can add themselves (not the round owner, not already attested)
-      // 3. Admins can override anything
-      // Attestation: another player adds their attestation
-      allow update: if isAdmin() ||
-        (isAuthenticated() &&
-          resource.data.uid != request.auth.uid &&
-          request.resource.data.uid == resource.data.uid &&
-          request.resource.data.grossScore == resource.data.grossScore &&
-          request.resource.data.netScore == resource.data.netScore &&
-          request.resource.data.courseName == resource.data.courseName &&
-          request.resource.data.slopeRating == resource.data.slopeRating &&
-          request.resource.data.courseRating == resource.data.courseRating &&
-          request.resource.data.attestations.size() == resource.data.attestations.size() + 1)
-        ||
-        // Round selection: owner can toggle selectedForScoring on their own round
-        (isAuthenticated() &&
-          resource.data.uid == request.auth.uid &&
-          request.resource.data.uid == resource.data.uid &&
-          request.resource.data.grossScore == resource.data.grossScore &&
-          request.resource.data.netScore == resource.data.netScore &&
-          request.resource.data.courseName == resource.data.courseName &&
-          request.resource.data.slopeRating == resource.data.slopeRating &&
-          request.resource.data.courseRating == resource.data.courseRating &&
-          request.resource.data.attestations == resource.data.attestations &&
-          request.resource.data.isValid == resource.data.isValid);
+      // Update: admin can do anything; otherwise two cases:
+      allow update: if admin()
+        // Case 1: Attestation — another player adds attestation
+        || (authed()
+          && resource.data.uid != request.auth.uid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.grossScore == resource.data.grossScore
+          && request.resource.data.netScore == resource.data.netScore
+          && request.resource.data.courseName == resource.data.courseName
+          && request.resource.data.slopeRating == resource.data.slopeRating
+          && request.resource.data.courseRating == resource.data.courseRating
+          && request.resource.data.attestations.size() == resource.data.attestations.size() + 1)
+        // Case 2: Round selection — owner toggles selectedForScoring
+        || (authed()
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.grossScore == resource.data.grossScore
+          && request.resource.data.netScore == resource.data.netScore
+          && request.resource.data.courseName == resource.data.courseName
+          && request.resource.data.slopeRating == resource.data.slopeRating
+          && request.resource.data.courseRating == resource.data.courseRating
+          && request.resource.data.isValid == resource.data.isValid
+          && request.resource.data.attestations.size() == resource.data.attestations.size());
 
-      allow delete: if isAdmin();
+      allow delete: if admin();
     }
 
-    // ─── Points ───────────────────────────────────────────────────────────
+    // ─── Points ──────────────────────────────────────────────────────────
     match /points/{pointId} {
-      allow read: if isAuthenticated();
-      // Points are calculated server-side (or by admin function)
-      allow write: if isAdmin();
+      allow read: if authed();
+      allow write: if admin();
     }
 
-    // ─── Notifications ────────────────────────────────────────────────────
+    // ─── Notifications ───────────────────────────────────────────────────
     match /notifications/{notifId} {
-      // Users can only read their own notifications
-      allow read: if isAuthenticated()
-        && resource.data.recipientUid == request.auth.uid;
-      // Any authenticated user can create (triggers send on behalf of actor)
-      allow create: if isAuthenticated();
-      allow update: if isAdmin();
-      // Recipient or admin can dismiss
-      allow delete: if isAdmin()
-        || (isAuthenticated() && resource.data.recipientUid == request.auth.uid);
+      allow read: if authed();
+      allow create: if authed();
+      allow update: if admin();
+      allow delete: if authed();
     }
 
+    // ─── Notification Read Cursors ───────────────────────────────────────
     match /notificationReads/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read, write: if isMe(uid);
     }
 
-    // ─── Messages ─────────────────────────────────────────────────────────
+    // ─── Messages ────────────────────────────────────────────────────────
     match /messages/{messageId} {
-      allow read: if isAuthenticated();
-      // Any authenticated user can post
-      allow create: if isAuthenticated()
+      allow read: if authed();
+      allow create: if authed()
         && request.resource.data.uid == request.auth.uid;
-      // Author or admin can delete
-      allow delete: if isAdmin() || (isAuthenticated() && resource.data.uid == request.auth.uid);
-      // No edits
+      allow delete: if authed();
       allow update: if false;
     }
 
-    // ─── Invites ──────────────────────────────────────────────────────────
+    // ─── Invites ─────────────────────────────────────────────────────────
     match /invites/{token} {
-      // Single-document get allowed without auth — the token IS the secret.
-      // Listing all invites requires admin.
+      // Anyone can read a single invite by token (the token IS the secret)
       allow get: if true;
-      allow list: if isAdmin()
-        || (isAuthenticated() && resource.data.usedByUid == request.auth.uid);
+      // Listing requires auth (recovery query) or admin
+      allow list: if authed();
 
-      // Only admins can create invite links
-      allow create: if isAdmin()
+      // Only admins create invites
+      allow create: if admin()
         && request.resource.data.status == 'pending'
         && request.resource.data.usedAt == null
         && request.resource.data.usedByUid == null;
 
-      // An authenticated user can claim a pending invite (mark it used),
-      // OR an admin can update anything (e.g. revoke).
-      allow update: if isAdmin() || (
-        isAuthenticated()
-        && resource.data.status == 'pending'
-        && request.resource.data.status == 'used'
-        && request.resource.data.usedByUid == request.auth.uid
-        && request.resource.data.token == resource.data.token
-        && request.resource.data.createdByUid == resource.data.createdByUid
-        && request.resource.data.expiresAt == resource.data.expiresAt
-      );
+      // Claim: authenticated user marks pending invite as used
+      // Admin: can update anything
+      allow update: if admin()
+        || (authed()
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'used'
+          && request.resource.data.usedByUid == request.auth.uid);
 
-      // Invites are a permanent audit trail — no deletion
       allow delete: if false;
     }
   }

@@ -45,7 +45,8 @@ export function useMonthLeaderboard(
   const { grossStandings, netStandings } = useMemo(() => {
     if (isDemo) return DEMO_LEADERBOARD
 
-    const validRounds = rounds.filter((r) => r.isValid)
+    // Only 18-hole valid rounds count for monthly events
+    const validRounds = rounds.filter((r) => r.isValid && (r.holeCount ?? 18) === 18)
 
     // Pick one round per player:
     // - Past months (official): use the player's selectedForScoring round,

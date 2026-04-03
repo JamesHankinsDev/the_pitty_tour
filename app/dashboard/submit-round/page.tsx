@@ -31,7 +31,7 @@ import { useRouter } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-const schema = z.object({
+const schema18 = z.object({
   courseName: z.string().min(2, 'Course name required'),
   courseRating: z
     .number({ invalid_type_error: 'Enter course rating' })
@@ -58,7 +58,34 @@ const schema = z.object({
   notes: z.string().max(300, 'Max 300 characters').optional(),
 })
 
-type FormData = z.infer<typeof schema>
+const schema9 = z.object({
+  courseName: z.string().min(2, 'Course name required'),
+  courseRating: z
+    .number({ invalid_type_error: 'Enter course rating' })
+    .min(27, 'Too low')
+    .max(40, 'Too high'),
+  slopeRating: z
+    .number({ invalid_type_error: 'Enter slope rating' })
+    .min(55, 'Min 55')
+    .max(155, 'Max 155'),
+  grossScore: z
+    .number({ invalid_type_error: 'Enter gross score' })
+    .min(27, 'Score too low')
+    .max(100, 'Score too high'),
+  sandSaves: z
+    .number({ invalid_type_error: 'Enter a number' })
+    .min(0, 'Cannot be negative')
+    .max(9, 'Max 9')
+    .default(0),
+  par3Pars: z
+    .number({ invalid_type_error: 'Enter a number' })
+    .min(0, 'Cannot be negative')
+    .max(3, 'Max 3')
+    .default(0),
+  notes: z.string().max(300, 'Max 300 characters').optional(),
+})
+
+type FormData = z.infer<typeof schema18>
 
 export default function SubmitRoundPage() {
   const { profile, user } = useAuth()
@@ -66,19 +93,23 @@ export default function SubmitRoundPage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [holeCount, setHoleCount] = useState<9 | 18>(18)
 
   const currentMonth = getCurrentMonthKey()
   const daysLeft = daysRemainingInMonth()
+
+  const schema = holeCount === 9 ? schema9 : schema18
 
   const {
     register,
     handleSubmit,
     control,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      courseRating: 72.0,
+      courseRating: holeCount === 9 ? 36.0 : 72.0,
       slopeRating: 113,
       grossScore: undefined,
       sandSaves: 0,
@@ -121,6 +152,7 @@ export default function SubmitRoundPage() {
         uid: user.uid,
         seasonId: season.id,
         month: currentMonth,
+        holeCount,
         courseName: data.courseName,
         courseRating: data.courseRating,
         slopeRating: data.slopeRating,
@@ -132,18 +164,22 @@ export default function SubmitRoundPage() {
         notes: data.notes ?? '',
       })
       setSubmitted(true)
-      toast.success('Round submitted! Now get a partner to attest it.')
 
-      // Notify all players about the new round
-      notifyAllPlayers({
-        type: 'round_submitted',
-        title: 'New Round Submitted',
-        body: `${profile.displayName} shot ${data.grossScore} at ${data.courseName}`,
-        link: '/dashboard/leaderboard',
-        actorUid: user.uid,
-        actorName: profile.displayName,
-        actorPhotoURL: profile.photoURL,
-      }, user.uid).catch(() => {})
+      if (holeCount === 9) {
+        toast.success('9-hole round logged! This counts toward your handicap but not monthly events.')
+      } else {
+        toast.success('Round submitted! Now get a partner to attest it.')
+        // Only notify for 18-hole tour rounds
+        notifyAllPlayers({
+          type: 'round_submitted',
+          title: 'New Round Submitted',
+          body: `${profile.displayName} shot ${data.grossScore} at ${data.courseName}`,
+          link: '/dashboard/leaderboard',
+          actorUid: user.uid,
+          actorName: profile.displayName,
+          actorPhotoURL: profile.photoURL,
+        }, user.uid).catch(() => {})
+      }
     } catch (err) {
       toast.error('Failed to submit round. Please try again.')
     } finally {
@@ -209,6 +245,47 @@ export default function SubmitRoundPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* 9 / 18 Hole Toggle */}
+        <div className="flex rounded-lg border overflow-hidden">
+          <button
+            type="button"
+            onClick={() => { setHoleCount(18); reset({ courseRating: 72.0, slopeRating: 113, grossScore: undefined as any, sandSaves: 0, par3Pars: 0 }) }}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+              holeCount === 18
+                ? 'bg-green-600 text-white'
+                : 'bg-muted text-muted-foreground hover:bg-accent'
+            }`}
+          >
+            18 Holes
+            <span className="block text-xs font-normal mt-0.5 opacity-80">Tour Event</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setHoleCount(9); reset({ courseRating: 36.0, slopeRating: 113, grossScore: undefined as any, sandSaves: 0, par3Pars: 0 }) }}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+              holeCount === 9
+                ? 'bg-blue-600 text-white'
+                : 'bg-muted text-muted-foreground hover:bg-accent'
+            }`}
+          >
+            9 Holes
+            <span className="block text-xs font-normal mt-0.5 opacity-80">Practice / Handicap</span>
+          </button>
+        </div>
+
+        {holeCount === 9 && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-3 flex gap-2">
+              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-800">
+                9-hole rounds count toward your handicap average but{' '}
+                <strong>cannot be selected for monthly Tour event scoring</strong>.
+                Attestation is optional.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Course Info */}
         <Card>
           <CardHeader className="pb-3">

@@ -86,7 +86,7 @@ export function calculateMonthlyPoints(
   const bestByPlayer = new Map<string, Round>()
 
   for (const round of rounds) {
-    if (!round.isValid) continue
+    if (!round.isValid || (round.holeCount ?? 18) !== 18) continue
     const existing = bestByPlayer.get(round.uid)
     if (!existing || round.grossScore < existing.grossScore) {
       bestByPlayer.set(round.uid, round)
