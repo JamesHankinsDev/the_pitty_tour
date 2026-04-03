@@ -6,6 +6,7 @@ import {
   getSeasonRegistrations,
   updateRegistration,
   getAllUsers,
+  getSeasonRounds,
 } from '@/lib/firebase/firestore'
 import {
   calculateMonthlyPoolSplit,
@@ -22,8 +23,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { DollarSign, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
-import type { Registration, UserProfile } from '@/lib/types'
+import { isPastMonth } from '@/lib/utils/dates'
+import { DollarSign, AlertTriangle, CheckCircle2, XCircle, Zap } from 'lucide-react'
+import type { Registration, UserProfile, Round } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,17 +33,21 @@ export default function AdminPrizePoolPage() {
   const { season } = useActiveSeason()
   const [regs, setRegs] = useState<Registration[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
+  const [allRounds, setAllRounds] = useState<Round[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
+  const [bulkProcessing, setBulkProcessing] = useState(false)
 
   const loadData = async () => {
     if (!season) return
-    const [allRegs, allUsers] = await Promise.all([
+    const [allRegs, allUsers, rounds] = await Promise.all([
       getSeasonRegistrations(season.id),
       getAllUsers(),
+      getSeasonRounds(season.id),
     ])
     setRegs(allRegs)
     setUsers(allUsers)
+    setAllRounds(rounds)
     setLoading(false)
   }
 
@@ -94,6 +100,63 @@ export default function AdminPrizePoolPage() {
     } finally {
       setUpdating(null)
     }
+  }
+
+  /**
+   * Bulk forfeit: for a given month, find all registered players who do NOT
+   * have a valid 18-hole round, and mark them as forfeited.
+   */
+  const handleBulkForfeit = async (month: string) => {
+    if (!season) return
+    setBulkProcessing(true)
+    try {
+      const validUids = new Set(
+        allRounds
+          .filter((r) => r.month === month && r.isValid && (r.holeCount ?? 18) === 18)
+          .map((r) => r.uid)
+      )
+
+      let count = 0
+      for (const reg of regs) {
+        const alreadyForfeited = reg.forfeitedMonths.includes(month)
+        const hasValidRound = validUids.has(reg.uid)
+
+        if (!hasValidRound && !alreadyForfeited) {
+          const newForfeits = [...reg.forfeitedMonths, month]
+          const newTotal = newForfeits.length * season.monthlyDue
+          await updateRegistration(reg.id, {
+            forfeitedMonths: newForfeits,
+            totalForfeited: newTotal,
+          })
+          count++
+        }
+      }
+
+      if (count === 0) {
+        toast.success(`No new forfeits for ${formatMonthKey(month)} — all players submitted.`)
+      } else {
+        toast.success(`${count} player${count !== 1 ? 's' : ''} forfeited for ${formatMonthKey(month)}`)
+      }
+      loadData()
+    } catch {
+      toast.error('Bulk forfeit failed.')
+    } finally {
+      setBulkProcessing(false)
+    }
+  }
+
+  const getBulkForfeitPreview = (month: string) => {
+    const validUids = new Set(
+      allRounds
+        .filter((r) => r.month === month && r.isValid && (r.holeCount ?? 18) === 18)
+        .map((r) => r.uid)
+    )
+    const alreadyForfeited = regs.filter((r) => r.forfeitedMonths.includes(month)).length
+    const wouldForfeit = regs.filter(
+      (r) => !validUids.has(r.uid) && !r.forfeitedMonths.includes(month)
+    ).length
+    const withValid = regs.filter((r) => validUids.has(r.uid)).length
+    return { withValid, alreadyForfeited, wouldForfeit }
   }
 
   if (!season) {
@@ -301,6 +364,56 @@ export default function AdminPrizePoolPage() {
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Bulk Forfeit */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-500" />
+            Bulk Forfeit Processing
+          </CardTitle>
+          <CardDescription>
+            One-click forfeit for all players without a valid 18-hole round in a past month
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {seasonMonths.filter((m) => isPastMonth(m)).length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No past months to process yet.
+            </p>
+          ) : (
+            seasonMonths.filter((m) => isPastMonth(m)).reverse().map((month) => {
+              const { withValid, alreadyForfeited, wouldForfeit } = getBulkForfeitPreview(month)
+              return (
+                <div key={month} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{formatMonthKey(month)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {withValid} submitted &middot; {alreadyForfeited} forfeited
+                      {wouldForfeit > 0 && (
+                        <span className="text-red-600 font-medium"> &middot; {wouldForfeit} to forfeit</span>
+                      )}
+                    </p>
+                  </div>
+                  {wouldForfeit > 0 ? (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleBulkForfeit(month)}
+                      disabled={bulkProcessing}
+                    >
+                      <Zap className="w-3.5 h-3.5 mr-1.5" />
+                      {bulkProcessing ? 'Processing...' : `Forfeit ${wouldForfeit}`}
+                    </Button>
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                  )}
+                </div>
+              )
+            })
+          )}
         </CardContent>
       </Card>
     </div>
