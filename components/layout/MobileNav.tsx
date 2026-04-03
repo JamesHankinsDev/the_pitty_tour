@@ -24,6 +24,8 @@ import {
   MapPin,
   Calendar,
   Stamp,
+  Award,
+  Medal,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -61,6 +63,7 @@ const menuSections = [
       { href: '/dashboard/messages', label: 'Tour Board', icon: MessageSquare },
       { href: '/dashboard/courses', label: 'Courses', icon: MapPin },
       { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
+      { href: '/dashboard/highlights', label: 'Highlights', icon: Award },
     ],
   },
   {
@@ -68,6 +71,7 @@ const menuSections = [
     items: [
       { href: '/dashboard/my-qr', label: 'My QR Code', icon: QrCode },
       { href: '/dashboard/marker-passport', label: 'Marker Passport', icon: Stamp },
+      { href: '/dashboard/achievements', label: 'Achievements', icon: Medal },
       { href: '/dashboard/profile', label: 'Profile', icon: User },
     ],
   },
@@ -92,10 +96,17 @@ export function MobileNav() {
 
         <div className="flex items-center gap-1">
           <NotificationBell />
-          <Avatar className="w-7 h-7">
-            <AvatarImage src={profile?.photoURL} />
-            <AvatarFallback>{profile?.displayName?.[0] ?? 'U'}</AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="w-7 h-7">
+              <AvatarImage src={profile?.photoURL} />
+              <AvatarFallback>{profile?.displayName?.[0] ?? 'U'}</AvatarFallback>
+            </Avatar>
+            {rank && rank <= 3 && (
+              <span className="absolute -top-1.5 -right-1.5 text-xs leading-none">
+                {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}
+              </span>
+            )}
+          </div>
           <button
             onClick={() => setMenuOpen(true)}
             className="p-2 -mr-2"
@@ -174,10 +185,17 @@ export function MobileNav() {
 
           <div className="border-t p-4">
             <div className="flex items-center gap-3 mb-2">
-              <Avatar>
-                <AvatarImage src={profile?.photoURL} />
-                <AvatarFallback>{profile?.displayName?.[0] ?? 'U'}</AvatarFallback>
-              </Avatar>
+              <div className="relative shrink-0">
+                <Avatar>
+                  <AvatarImage src={profile?.photoURL} />
+                  <AvatarFallback>{profile?.displayName?.[0] ?? 'U'}</AvatarFallback>
+                </Avatar>
+                {rank && rank <= 3 && (
+                  <span className="absolute -top-1.5 -right-1.5 text-sm leading-none">
+                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}
+                  </span>
+                )}
+              </div>
               <div>
                 <p className="font-medium">{profile?.displayName}</p>
                 <p className="text-sm text-muted-foreground">

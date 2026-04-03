@@ -21,6 +21,8 @@ import {
   MapPin,
   Calendar,
   Stamp,
+  Award,
+  Medal,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -49,6 +51,7 @@ const navSections = [
       { href: "/dashboard/messages", label: "Tour Board", icon: MessageSquare },
       { href: "/dashboard/courses", label: "Courses", icon: MapPin },
       { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
+      { href: "/dashboard/highlights", label: "Highlights", icon: Award },
     ],
   },
   {
@@ -56,6 +59,7 @@ const navSections = [
     items: [
       { href: "/dashboard/my-qr", label: "My QR Code", icon: QrCode },
       { href: "/dashboard/marker-passport", label: "Marker Passport", icon: Stamp },
+      { href: "/dashboard/achievements", label: "Achievements", icon: Medal },
       { href: "/dashboard/profile", label: "Profile", icon: User },
     ],
   },
@@ -153,10 +157,17 @@ export function DashboardNav() {
       {/* User info + stats + logout */}
       <div className="border-t p-4">
         <div className="flex items-center gap-3 mb-2">
-          <Avatar className="w-8 h-8">
-            <AvatarImage src={profile?.photoURL} />
-            <AvatarFallback>{profile?.displayName?.[0] ?? "U"}</AvatarFallback>
-          </Avatar>
+          <div className="relative shrink-0">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={profile?.photoURL} />
+              <AvatarFallback>{profile?.displayName?.[0] ?? "U"}</AvatarFallback>
+            </Avatar>
+            {rank && rank <= 3 && (
+              <span className="absolute -top-1.5 -right-1.5 text-sm leading-none">
+                {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}
+              </span>
+            )}
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">
               {profile?.displayName ?? "Player"}
