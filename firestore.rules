@@ -132,6 +132,15 @@ service cloud.firestore {
       allow create: if authed();
       allow update: if authed();
       allow delete: if authed();
+
+      // Course reviews subcollection
+      match /reviews/{reviewId} {
+        allow read: if authed();
+        allow create: if authed()
+          && request.resource.data.uid == request.auth.uid;
+        allow delete: if authed();
+        allow update: if false;
+      }
     }
 
     // ─── Messages ────────────────────────────────────────────────────────

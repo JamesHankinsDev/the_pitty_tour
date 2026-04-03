@@ -7,6 +7,9 @@ import {
   subscribeToCourses,
   toggleCourseFavorite,
   deleteCourse,
+  addCourseReview,
+  subscribeToCourseReviews,
+  deleteCourseReview,
 } from '@/lib/firebase/firestore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,10 +29,201 @@ import {
   Trash2,
   X,
   Globe,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  Send,
 } from 'lucide-react'
-import type { Course } from '@/lib/types'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import type { Course, CourseReview } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
+
+/* ─── Star Rating ────────────────────────────────────────────────────────── */
+
+function StarRating({
+  value,
+  onChange,
+  readonly = false,
+  size = 'md',
+}: {
+  value: number
+  onChange?: (v: number) => void
+  readonly?: boolean
+  size?: 'sm' | 'md'
+}) {
+  const px = size === 'sm' ? 'w-3.5 h-3.5' : 'w-5 h-5'
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          disabled={readonly}
+          onClick={() => onChange?.(star)}
+          className={readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110 transition-transform'}
+        >
+          <Star
+            className={`${px} ${
+              star <= value
+                ? 'text-yellow-500 fill-yellow-500'
+                : 'text-gray-300'
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function avgRating(reviews: CourseReview[]): number {
+  if (reviews.length === 0) return 0
+  return Math.round(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length * 10) / 10
+}
+
+/* ─── Review Section ─────────────────────────────────────────────────────── */
+
+function ReviewSection({
+  courseId,
+  uid,
+  displayName,
+  photoURL,
+  isAdmin,
+}: {
+  courseId: string
+  uid: string
+  displayName: string
+  photoURL: string
+  isAdmin: boolean
+}) {
+  const [reviews, setReviews] = useState<CourseReview[]>([])
+  const [expanded, setExpanded] = useState(false)
+  const [rating, setRating] = useState(0)
+  const [text, setText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!expanded) return
+    const unsub = subscribeToCourseReviews(courseId, setReviews)
+    return unsub
+  }, [courseId, expanded])
+
+  const avg = avgRating(reviews)
+  const hasReviewed = reviews.some((r) => r.uid === uid)
+
+  const handleSubmit = async () => {
+    if (rating === 0) { toast.error('Select a star rating'); return }
+    setSubmitting(true)
+    try {
+      await addCourseReview({
+        courseId,
+        uid,
+        displayName,
+        photoURL,
+        rating,
+        text: text.trim(),
+      })
+      setRating(0)
+      setText('')
+      toast.success('Review posted!')
+    } catch {
+      toast.error('Failed to post review.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (reviewId: string) => {
+    try {
+      await deleteCourseReview(courseId, reviewId)
+    } catch {
+      toast.error('Failed to delete review.')
+    }
+  }
+
+  return (
+    <div className="border-t mt-3 pt-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+      >
+        <MessageSquare className="w-3.5 h-3.5" />
+        <span>Reviews</span>
+        {avg > 0 && (
+          <span className="flex items-center gap-1 text-yellow-600">
+            <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+            {avg}
+          </span>
+        )}
+        {expanded ? <ChevronUp className="w-3.5 h-3.5 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 ml-auto" />}
+      </button>
+
+      {expanded && (
+        <div className="mt-2 space-y-3">
+          {/* Review form */}
+          {!hasReviewed && (
+            <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium">Your rating:</span>
+                <StarRating value={rating} onChange={setRating} />
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Quick review (optional)..."
+                  className="text-sm flex-1"
+                  maxLength={200}
+                />
+                <Button
+                  variant="green"
+                  size="icon"
+                  onClick={handleSubmit}
+                  disabled={submitting || rating === 0}
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Review list */}
+          {reviews.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">
+              No reviews yet. Be the first!
+            </p>
+          ) : (
+            reviews.map((review) => (
+              <div key={review.id} className="flex gap-2.5">
+                <Avatar className="w-6 h-6 shrink-0 mt-0.5">
+                  <AvatarImage src={review.photoURL} />
+                  <AvatarFallback>{review.displayName[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium">{review.displayName}</span>
+                    <StarRating value={review.rating} readonly size="sm" />
+                  </div>
+                  {review.text && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{review.text}</p>
+                  )}
+                </div>
+                {(review.uid === uid || isAdmin) && (
+                  <button
+                    onClick={() => handleDelete(review.id)}
+                    className="text-muted-foreground hover:text-red-500 shrink-0 p-0.5"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function CoursesPage() {
   const { profile, user, isDemo } = useAuth()
@@ -449,6 +643,15 @@ export default function CoursesPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Reviews */}
+                  <ReviewSection
+                    courseId={course.id}
+                    uid={user?.uid ?? ''}
+                    displayName={profile?.displayName ?? ''}
+                    photoURL={profile?.photoURL ?? ''}
+                    isAdmin={profile?.isAdmin ?? false}
+                  />
                 </CardContent>
               </Card>
             )

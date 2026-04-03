@@ -125,6 +125,18 @@ export interface Course {
   favoritedBy: string[]     // uids of players who favorited
 }
 
+// ─── Course Reviews ─────────────────────────────────────────────────────────
+export interface CourseReview {
+  id: string
+  courseId: string
+  uid: string
+  displayName: string
+  photoURL: string
+  rating: number       // 1–5 stars
+  text: string
+  createdAt: Timestamp
+}
+
 // ─── Invite ───────────────────────────────────────────────────────────────────
 export interface Invite {
   token: string           // same as the Firestore document ID

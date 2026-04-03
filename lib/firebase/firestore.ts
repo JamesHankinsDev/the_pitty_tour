@@ -37,6 +37,7 @@ function guardDemoWrite(action: string): boolean {
 }
 import type {
   HandicapSnapshot,
+  CourseReview,
   UserProfile,
   Season,
   Registration,
@@ -840,4 +841,40 @@ export async function toggleCourseFavorite(
 export async function deleteCourse(courseId: string): Promise<void> {
   if (guardDemoWrite('Deleting courses')) return
   await deleteDoc(doc(db, COLLECTIONS.COURSES, courseId))
+}
+
+// ─── Course Reviews ─────────────────────────────────────────────────────────
+
+export async function addCourseReview(
+  data: Omit<CourseReview, 'id' | 'createdAt'>
+): Promise<void> {
+  if (guardDemoWrite('Adding reviews')) return
+  await addDoc(
+    collection(db, COLLECTIONS.COURSES, data.courseId, 'reviews'),
+    { ...data, createdAt: serverTimestamp() }
+  )
+}
+
+export function subscribeToCourseReviews(
+  courseId: string,
+  callback: (reviews: CourseReview[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.COURSES, courseId, 'reviews'),
+    orderBy('createdAt', 'desc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CourseReview)))
+  }, (err) => {
+    console.warn('Reviews subscription error:', err.message)
+    callback([])
+  })
+}
+
+export async function deleteCourseReview(
+  courseId: string,
+  reviewId: string
+): Promise<void> {
+  if (guardDemoWrite('Deleting reviews')) return
+  await deleteDoc(doc(db, COLLECTIONS.COURSES, courseId, 'reviews', reviewId))
 }
