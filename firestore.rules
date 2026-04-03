@@ -96,6 +96,14 @@ service cloud.firestore {
       allow read, write: if isMe(uid);
     }
 
+    // ─── Courses ──────────────────────────────────────────────────────────
+    match /courses/{courseId} {
+      allow read: if authed();
+      allow create: if authed();
+      allow update: if authed();
+      allow delete: if authed();
+    }
+
     // ─── Messages ────────────────────────────────────────────────────────
     match /messages/{messageId} {
       allow read: if authed();

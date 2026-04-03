@@ -57,6 +57,26 @@ export interface NotificationReadCursor {
   lastReadAt: Timestamp
 }
 
+// ─── Course Directory ───────────────────────────────────────────────────────
+export interface Course {
+  id: string
+  name: string
+  city: string
+  state: string
+  holes: 9 | 18 | 27 | 36
+  greenFeeMin: number       // typical low end, e.g. 35
+  greenFeeMax: number       // typical high end, e.g. 75
+  courseRating?: number
+  slopeRating?: number
+  bookingUrl?: string       // link to book tee times
+  websiteUrl?: string
+  notes: string
+  addedByUid: string
+  addedByName: string
+  addedAt: Timestamp
+  favoritedBy: string[]     // uids of players who favorited
+}
+
 // ─── Invite ───────────────────────────────────────────────────────────────────
 export interface Invite {
   token: string           // same as the Firestore document ID

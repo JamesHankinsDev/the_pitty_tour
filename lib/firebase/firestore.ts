@@ -45,6 +45,7 @@ import type {
   Message,
   Notification,
   NotificationType,
+  Course,
 } from '../types'
 
 // ─── Collections ─────────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ export const COLLECTIONS = {
   MESSAGES: 'messages',
   NOTIFICATIONS: 'notifications',
   NOTIFICATION_READS: 'notificationReads',
+  COURSES: 'courses',
 } as const
 
 // ─── User Operations ─────────────────────────────────────────────────────────
@@ -606,4 +608,57 @@ export function subscribeToReadCursor(
     console.warn('Read cursor subscription error:', err.message)
     callback(null)
   })
+}
+
+// ─── Course Directory ───────────────────────────────────────────────────────
+
+export async function addCourse(
+  data: Omit<Course, 'id' | 'addedAt' | 'favoritedBy'>
+): Promise<string> {
+  if (guardDemoWrite('Adding courses')) return ''
+  const ref = await addDoc(collection(db, COLLECTIONS.COURSES), {
+    ...data,
+    addedAt: serverTimestamp(),
+    favoritedBy: [],
+  })
+  return ref.id
+}
+
+export function subscribeToCourses(
+  callback: (courses: Course[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.COURSES),
+    orderBy('name', 'asc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Course)))
+  }, (err) => {
+    console.warn('Courses subscription error:', err.message)
+    callback([])
+  })
+}
+
+export async function toggleCourseFavorite(
+  courseId: string,
+  uid: string,
+  isFavorited: boolean
+): Promise<void> {
+  if (guardDemoWrite('Favoriting courses')) return
+  const ref = doc(db, COLLECTIONS.COURSES, courseId)
+  if (isFavorited) {
+    await updateDoc(ref, { favoritedBy: arrayUnion(uid) })
+  } else {
+    const snap = await getDoc(ref)
+    if (!snap.exists()) return
+    const course = snap.data() as Course
+    await updateDoc(ref, {
+      favoritedBy: course.favoritedBy.filter((id) => id !== uid),
+    })
+  }
+}
+
+export async function deleteCourse(courseId: string): Promise<void> {
+  if (guardDemoWrite('Deleting courses')) return
+  await deleteDoc(doc(db, COLLECTIONS.COURSES, courseId))
 }

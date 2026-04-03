@@ -7,7 +7,8 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
-import { submitRound, notifyAllPlayers } from '@/lib/firebase/firestore'
+import { submitRound, notifyAllPlayers, subscribeToCourses } from '@/lib/firebase/firestore'
+import type { Course } from '@/lib/types'
 import {
   calculateNetScore,
   calculateDifferential,
@@ -26,6 +27,7 @@ import {
   CheckCircle2,
   ArrowRight,
   Info,
+  MapPin,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -94,6 +96,14 @@ export default function SubmitRoundPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [holeCount, setHoleCount] = useState<9 | 18>(18)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [courseSearch, setCourseSearch] = useState('')
+  const [showCourseSuggestions, setShowCourseSuggestions] = useState(false)
+
+  useEffect(() => {
+    const unsub = subscribeToCourses(setCourses)
+    return unsub
+  }, [])
 
   const currentMonth = getCurrentMonthKey()
   const daysLeft = daysRemainingInMonth()
@@ -105,6 +115,7 @@ export default function SubmitRoundPage() {
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -292,13 +303,61 @@ export default function SubmitRoundPage() {
             <CardTitle className="text-base">Course Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="courseName">Course Name</Label>
               <Input
                 id="courseName"
                 placeholder="e.g. Augusta National"
-                {...register('courseName')}
+                autoComplete="off"
+                {...register('courseName', {
+                  onChange: (e) => {
+                    setCourseSearch(e.target.value)
+                    setShowCourseSuggestions(e.target.value.length >= 2)
+                  },
+                })}
+                onFocus={() => {
+                  if (courseSearch.length >= 2) setShowCourseSuggestions(true)
+                }}
+                onBlur={() => {
+                  // Delay so click on suggestion registers first
+                  setTimeout(() => setShowCourseSuggestions(false), 200)
+                }}
               />
+              {/* Course catalog suggestions */}
+              {showCourseSuggestions && (() => {
+                const matches = courses.filter((c) =>
+                  c.name.toLowerCase().includes(courseSearch.toLowerCase())
+                ).slice(0, 5)
+                if (matches.length === 0) return null
+                return (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg overflow-hidden">
+                    {matches.map((course) => (
+                      <button
+                        key={course.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2.5 hover:bg-accent transition-colors border-b last:border-0"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          setValue('courseName', course.name)
+                          if (course.courseRating) setValue('courseRating', course.courseRating)
+                          if (course.slopeRating) setValue('slopeRating', course.slopeRating)
+                          setCourseSearch(course.name)
+                          setShowCourseSuggestions(false)
+                          toast.success(`Loaded ${course.name} — rating & slope auto-filled`)
+                        }}
+                      >
+                        <p className="text-sm font-medium">{course.name}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {course.city}, {course.state}
+                          {course.courseRating && ` · Rating: ${course.courseRating}`}
+                          {course.slopeRating && ` · Slope: ${course.slopeRating}`}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })()}
               {errors.courseName && (
                 <p className="text-xs text-destructive">
                   {errors.courseName.message}
