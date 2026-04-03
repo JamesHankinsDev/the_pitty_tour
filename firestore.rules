@@ -43,12 +43,16 @@ service cloud.firestore {
     match /rounds/{roundId} {
       allow read: if authed();
 
-      // Create: must be own round, empty attestations, not valid, not selected
+      // Create: must be own round, empty attestations, not selected
+      // 9-hole rounds are auto-valid; 18-hole rounds start invalid
       allow create: if authed()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.attestations.size() == 0
-        && request.resource.data.isValid == false
-        && request.resource.data.selectedForScoring == false;
+        && request.resource.data.selectedForScoring == false
+        && (
+          (request.resource.data.holeCount == 18 && request.resource.data.isValid == false)
+          || (request.resource.data.holeCount == 9 && request.resource.data.isValid == true)
+        );
 
       // Update: admin can do anything; otherwise two cases:
       allow update: if admin()
@@ -94,6 +98,18 @@ service cloud.firestore {
     // ─── Notification Read Cursors ───────────────────────────────────────
     match /notificationReads/{uid} {
       allow read, write: if isMe(uid);
+    }
+
+    // ─── Payouts ─────────────────────────────────────────────────────────
+    match /payouts/{payoutId} {
+      allow read: if authed();
+      allow write: if admin();
+    }
+
+    // ─── Month Closes ───────────────────────────────────────────────────
+    match /monthCloses/{closeId} {
+      allow read: if authed();
+      allow write: if admin();
     }
 
     // ─── Courses ──────────────────────────────────────────────────────────

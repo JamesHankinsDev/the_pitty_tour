@@ -76,62 +76,60 @@ export function getPointsForRank(rank: number): number {
 }
 
 /**
- * Calculate and assign monthly points for all valid rounds
- * Returns a map of uid → { grossPoints, netPoints, totalMonthlyPoints }
+ * Calculate and assign monthly points for all valid rounds.
+ * Tour Points are based on NET scoring only — gross rank is used
+ * for payouts but not for season points.
+ *
+ * Returns a map of uid → { grossPoints (always 0), netPoints, totalMonthlyPoints }
  */
 export function calculateMonthlyPoints(
   rounds: Round[]
 ): Map<string, { grossPoints: number; netPoints: number; totalMonthlyPoints: number }> {
-  // Only count valid rounds; one per player (best gross score)
+  // Only count valid 18-hole rounds; one per player (best net score for points)
   const bestByPlayer = new Map<string, Round>()
 
   for (const round of rounds) {
     if (!round.isValid || (round.holeCount ?? 18) !== 18) continue
     const existing = bestByPlayer.get(round.uid)
-    if (!existing || round.grossScore < existing.grossScore) {
+    // For points, pick the round with the best net score
+    if (!existing || round.netScore < existing.netScore) {
       bestByPlayer.set(round.uid, round)
     }
   }
 
   const validRounds = Array.from(bestByPlayer.values())
 
-  // Sort by gross score (ascending = lower is better in golf)
-  const grossSorted = [...validRounds].sort((a, b) => a.grossScore - b.grossScore)
-  // Sort by net score (ascending)
-  const netSorted = [...validRounds].sort((a, b) => a.netScore - b.netScore)
+  // Rank by net score with tie handling
+  const netRanked = assignRanks(validRounds, (r) => r.netScore)
+
+  // For ties, split the combined points of the shared positions.
+  // e.g. two tied at 2nd: (450 + 375) / 2 = 412.5 each
+  const tiedCountByRank = new Map<number, number>()
+  for (const entry of netRanked) {
+    tiedCountByRank.set(entry.rank, (tiedCountByRank.get(entry.rank) ?? 0) + 1)
+  }
+
+  function getSplitPoints(rank: number): number {
+    const count = tiedCountByRank.get(rank) ?? 1
+    let total = 0
+    for (let i = rank; i < rank + count; i++) {
+      total += getPointsForRank(i)
+    }
+    return Math.round((total / count) * 10) / 10 // one decimal
+  }
 
   const result = new Map<
     string,
     { grossPoints: number; netPoints: number; totalMonthlyPoints: number }
   >()
 
-  grossSorted.forEach((round, idx) => {
-    const grossPoints = getPointsForRank(idx + 1)
-    const entry = result.get(round.uid) ?? {
+  for (const entry of netRanked) {
+    const netPoints = getSplitPoints(entry.rank)
+    result.set(entry.uid, {
       grossPoints: 0,
-      netPoints: 0,
-      totalMonthlyPoints: 0,
-    }
-    entry.grossPoints = grossPoints
-    result.set(round.uid, entry)
-  })
-
-  netSorted.forEach((round, idx) => {
-    const netPoints = getPointsForRank(idx + 1)
-    const entry = result.get(round.uid) ?? {
-      grossPoints: 0,
-      netPoints: 0,
-      totalMonthlyPoints: 0,
-    }
-    entry.netPoints = netPoints
-    entry.totalMonthlyPoints = entry.grossPoints + netPoints
-    result.set(round.uid, entry)
-  })
-
-  // Ensure totalMonthlyPoints is set for all
-  for (const [uid, entry] of result) {
-    entry.totalMonthlyPoints = entry.grossPoints + entry.netPoints
-    result.set(uid, entry)
+      netPoints,
+      totalMonthlyPoints: netPoints,
+    })
   }
 
   return result
@@ -233,23 +231,40 @@ export function calculateSeasonBonuses(bonusPool: number): SeasonBonusPayouts {
 // ─── Rank Helpers ─────────────────────────────────────────────────────────────
 
 /**
- * Rank gross scores for a list of rounds (lower is better)
+ * Assign ranks to a sorted array, handling ties.
+ * Players with the same score share a rank; the next rank skips.
+ * e.g. scores [70, 72, 72, 75] → ranks [1, 2, 2, 4]
+ */
+export function assignRanks<T>(
+  items: T[],
+  getScore: (item: T) => number
+): Array<T & { rank: number }> {
+  const sorted = [...items].sort((a, b) => getScore(a) - getScore(b))
+  let currentRank = 1
+  return sorted.map((item, i) => {
+    if (i > 0 && getScore(sorted[i]) !== getScore(sorted[i - 1])) {
+      currentRank = i + 1
+    }
+    return { ...item, rank: currentRank }
+  })
+}
+
+/**
+ * Rank gross scores for a list of rounds (lower is better), with ties
  */
 export function rankGrossScores(
   rounds: Round[]
 ): Array<Round & { rank: number }> {
-  const sorted = [...rounds].sort((a, b) => a.grossScore - b.grossScore)
-  return sorted.map((r, i) => ({ ...r, rank: i + 1 }))
+  return assignRanks(rounds, (r) => r.grossScore)
 }
 
 /**
- * Rank net scores for a list of rounds (lower is better)
+ * Rank net scores for a list of rounds (lower is better), with ties
  */
 export function rankNetScores(
   rounds: Round[]
 ): Array<Round & { rank: number }> {
-  const sorted = [...rounds].sort((a, b) => a.netScore - b.netScore)
-  return sorted.map((r, i) => ({ ...r, rank: i + 1 }))
+  return assignRanks(rounds, (r) => r.netScore)
 }
 
 // ─── Medal helpers ────────────────────────────────────────────────────────────

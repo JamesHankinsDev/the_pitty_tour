@@ -46,6 +46,8 @@ import type {
   Notification,
   NotificationType,
   Course,
+  Payout,
+  MonthClose,
 } from '../types'
 
 // ─── Collections ─────────────────────────────────────────────────────────────
@@ -59,6 +61,8 @@ export const COLLECTIONS = {
   NOTIFICATIONS: 'notifications',
   NOTIFICATION_READS: 'notificationReads',
   COURSES: 'courses',
+  PAYOUTS: 'payouts',
+  MONTH_CLOSES: 'monthCloses',
 } as const
 
 // ─── User Operations ─────────────────────────────────────────────────────────
@@ -203,11 +207,13 @@ export async function submitRound(
   data: Omit<Round, 'id' | 'submittedAt' | 'attestations' | 'isValid' | 'selectedForScoring'>
 ): Promise<string> {
   if (guardDemoWrite('Submitting rounds')) return '';
+  // 9-hole rounds are auto-valid (practice/handicap only, no attestation needed)
+  const is9Hole = data.holeCount === 9
   const ref = await addDoc(collection(db, COLLECTIONS.ROUNDS), {
     ...data,
     submittedAt: serverTimestamp(),
     attestations: [],
-    isValid: false,
+    isValid: is9Hole,
     selectedForScoring: false,
     notes: data.notes ?? '',
   })
@@ -608,6 +614,142 @@ export function subscribeToReadCursor(
     console.warn('Read cursor subscription error:', err.message)
     callback(null)
   })
+}
+
+// ─── Payouts & Month Closes ──────────────────────────────────────────────────
+
+import type { PayoutPreview, MonthPayoutResult } from '../utils/payouts'
+
+/**
+ * Check if a month has already been closed.
+ */
+export async function getMonthClose(
+  seasonId: string,
+  month: string
+): Promise<MonthClose | null> {
+  const q = query(
+    collection(db, COLLECTIONS.MONTH_CLOSES),
+    where('seasonId', '==', seasonId),
+    where('month', '==', month),
+    limit(1)
+  )
+  const snap = await getDocs(q)
+  return snap.empty ? null : ({ id: snap.docs[0].id, ...snap.docs[0].data() } as MonthClose)
+}
+
+/**
+ * Close a month: batch-write all payouts and the month close record atomically.
+ */
+export async function closeMonth(
+  seasonId: string,
+  month: string,
+  closedByUid: string,
+  result: MonthPayoutResult
+): Promise<void> {
+  if (guardDemoWrite('Closing months')) return
+
+  // Check not already closed
+  const existing = await getMonthClose(seasonId, month)
+  if (existing) throw new Error('MONTH_ALREADY_CLOSED')
+
+  const batch = writeBatch(db)
+  const now = Timestamp.now()
+
+  // Write each player payout
+  for (const p of result.payouts) {
+    const ref = doc(collection(db, COLLECTIONS.PAYOUTS))
+    batch.set(ref, {
+      uid: p.uid,
+      seasonId,
+      month,
+      grossPayout: p.grossPayout,
+      netPayout: p.netPayout,
+      savesPayout: p.savesPayout,
+      par3Payout: p.par3Payout,
+      totalPayout: p.totalPayout,
+      grossRank: p.grossRank,
+      netRank: p.netRank,
+      sandSaves: p.sandSaves,
+      par3Pars: p.par3Pars,
+      doubleDipResolution: p.doubleDipResolution,
+      closedAt: now,
+      closedByUid,
+    })
+  }
+
+  // Write month close record
+  const closeRef = doc(collection(db, COLLECTIONS.MONTH_CLOSES))
+  batch.set(closeRef, {
+    seasonId,
+    month,
+    totalDuesCollected: result.totalDuesCollected,
+    seasonContribution: result.seasonContribution,
+    performancePurse: result.performancePurse,
+    netPool: result.netPool,
+    grossPool: result.grossPool,
+    savesPool: result.savesPool,
+    par3Pool: result.par3Pool,
+    perSaveValue: result.perSaveValue,
+    perPar3Value: result.perPar3Value,
+    totalSaves: result.totalSaves,
+    totalPar3Pars: result.totalPar3Pars,
+    playerCount: result.playerCount,
+    closedAt: now,
+    closedByUid,
+  })
+
+  await batch.commit()
+}
+
+/**
+ * Get all payouts for a player in a season.
+ */
+export function subscribeToPlayerPayouts(
+  uid: string,
+  seasonId: string,
+  callback: (payouts: Payout[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.PAYOUTS),
+    where('uid', '==', uid),
+    where('seasonId', '==', seasonId)
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Payout)))
+  }, (err) => {
+    console.warn('Payouts subscription error:', err.message)
+    callback([])
+  })
+}
+
+/**
+ * Get all payouts for a month (admin view).
+ */
+export async function getMonthPayouts(
+  seasonId: string,
+  month: string
+): Promise<Payout[]> {
+  const q = query(
+    collection(db, COLLECTIONS.PAYOUTS),
+    where('seasonId', '==', seasonId),
+    where('month', '==', month)
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Payout))
+}
+
+/**
+ * Get all month closes for a season (to show which months are finalized).
+ */
+export async function getSeasonMonthCloses(
+  seasonId: string
+): Promise<MonthClose[]> {
+  const q = query(
+    collection(db, COLLECTIONS.MONTH_CLOSES),
+    where('seasonId', '==', seasonId)
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as MonthClose))
 }
 
 // ─── Course Directory ───────────────────────────────────────────────────────

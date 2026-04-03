@@ -57,6 +57,46 @@ export interface NotificationReadCursor {
   lastReadAt: Timestamp
 }
 
+// ─── Payouts ────────────────────────────────────────────────────────────────
+export interface Payout {
+  id: string
+  uid: string
+  seasonId: string
+  month: string
+  grossPayout: number
+  netPayout: number
+  savesPayout: number
+  par3Payout: number
+  totalPayout: number
+  grossRank: number | null
+  netRank: number | null
+  sandSaves: number
+  par3Pars: number
+  doubleDipResolution: 'gross' | 'net' | 'none'
+  closedAt: Timestamp
+  closedByUid: string
+}
+
+export interface MonthClose {
+  id: string
+  seasonId: string
+  month: string
+  totalDuesCollected: number
+  seasonContribution: number
+  performancePurse: number
+  netPool: number
+  grossPool: number
+  savesPool: number
+  par3Pool: number
+  perSaveValue: number
+  perPar3Value: number
+  totalSaves: number
+  totalPar3Pars: number
+  playerCount: number
+  closedAt: Timestamp
+  closedByUid: string
+}
+
 // ─── Course Directory ───────────────────────────────────────────────────────
 export interface Course {
   id: string

@@ -5,9 +5,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useActiveSeason } from './useSeason'
 import {
   subscribeToSeasonPoints,
-  getAllUsers,
+  subscribeToPlayerPayouts,
 } from '@/lib/firebase/firestore'
-import type { Points, UserProfile } from '@/lib/types'
+import type { Points, Payout } from '@/lib/types'
 
 interface PlayerStats {
   rank: number | null
@@ -16,28 +16,14 @@ interface PlayerStats {
   loading: boolean
 }
 
-/**
- * Lightweight hook to get the current user's season rank, total points,
- * and total earnings for display in nav/sidebar.
- *
- * Earnings are not yet tracked in Firestore, so this returns 0 for now.
- * When earnings tracking is added, wire it up here.
- */
 export function usePlayerStats(): PlayerStats {
-  const { profile, isDemo } = useAuth()
+  const { profile, user, isDemo } = useAuth()
   const { season } = useActiveSeason()
   const [allPoints, setAllPoints] = useState<Points[]>([])
-  const [users, setUsers] = useState<UserProfile[]>([])
+  const [payouts, setPayouts] = useState<Payout[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (isDemo || !season) {
-      setLoading(false)
-      return
-    }
-    getAllUsers().then(setUsers).catch(() => {})
-  }, [isDemo, season])
-
+  // Subscribe to season points
   useEffect(() => {
     if (isDemo || !season) {
       setLoading(false)
@@ -55,6 +41,13 @@ export function usePlayerStats(): PlayerStats {
     }
   }, [season, isDemo])
 
+  // Subscribe to player's payouts
+  useEffect(() => {
+    if (isDemo || !season || !user) return
+    const unsub = subscribeToPlayerPayouts(user.uid, season.id, setPayouts)
+    return unsub
+  }, [season, user, isDemo])
+
   const stats = useMemo<PlayerStats>(() => {
     if (isDemo) {
       return {
@@ -65,13 +58,8 @@ export function usePlayerStats(): PlayerStats {
       }
     }
 
-    if (!profile || allPoints.length === 0) {
-      return {
-        rank: null,
-        totalPoints: profile?.totalPoints ?? 0,
-        totalEarnings: 0,
-        loading,
-      }
+    if (!profile) {
+      return { rank: null, totalPoints: 0, totalEarnings: 0, loading }
     }
 
     // Aggregate points by player
@@ -80,19 +68,22 @@ export function usePlayerStats(): PlayerStats {
       totals.set(pts.uid, (totals.get(pts.uid) ?? 0) + pts.totalMonthlyPoints)
     }
 
-    // Sort by total points descending to determine rank
+    // Sort descending to determine rank
     const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1])
     const myIndex = sorted.findIndex(([uid]) => uid === profile.uid)
     const rank = myIndex >= 0 ? myIndex + 1 : null
     const totalPoints = totals.get(profile.uid) ?? profile.totalPoints ?? 0
 
+    // Sum earnings from finalized payouts
+    const totalEarnings = payouts.reduce((sum, p) => sum + p.totalPayout, 0)
+
     return {
       rank,
       totalPoints,
-      totalEarnings: 0, // TODO: wire up when earnings tracking is implemented
+      totalEarnings: Math.round(totalEarnings * 100) / 100,
       loading: false,
     }
-  }, [allPoints, profile, isDemo, loading])
+  }, [allPoints, payouts, profile, isDemo, loading])
 
   return stats
 }

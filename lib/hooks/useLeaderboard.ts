@@ -4,27 +4,22 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   subscribeToMonthRounds,
   subscribeToSeasonPoints,
-  getAllUsers,
 } from '@/lib/firebase/firestore'
-import { calculateMonthlyPoints } from '@/lib/utils/scoring'
+import { calculateMonthlyPoints, assignRanks } from '@/lib/utils/scoring'
 import { isPastMonth } from '@/lib/utils/dates'
 import { useAuth } from '@/contexts/AuthContext'
+import { useUsers } from '@/contexts/UsersContext'
 import { DEMO_LEADERBOARD } from '@/lib/demo/data'
-import type { Round, Points, LeaderboardEntry, UserProfile } from '@/lib/types'
+import type { Round, Points, LeaderboardEntry } from '@/lib/types'
 
 export function useMonthLeaderboard(
   seasonId: string | undefined,
   month: string
 ) {
   const { isDemo } = useAuth()
+  const { users } = useUsers()
   const [rounds, setRounds] = useState<Round[]>([])
-  const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (isDemo) return
-    getAllUsers().then(setUsers)
-  }, [isDemo])
 
   useEffect(() => {
     if (isDemo || !seasonId) {
@@ -74,14 +69,13 @@ export function useMonthLeaderboard(
     const playerRounds = Array.from(roundByPlayer.values())
     const userMap = new Map(users.map((u) => [u.uid, u]))
 
-    const grossSorted = [...playerRounds].sort(
-      (a, b) => a.grossScore - b.grossScore
-    )
-    const netSorted = [...playerRounds].sort((a, b) => a.netScore - b.netScore)
+    // Rank with tie handling
+    const grossRanked = assignRanks(playerRounds, (r) => r.grossScore)
+    const netRanked = assignRanks(playerRounds, (r) => r.netScore)
 
     const pointsMap = calculateMonthlyPoints(rounds)
 
-    const makeEntry = (round: Round, rank: number): LeaderboardEntry => {
+    const makeEntry = (round: Round & { rank: number }): LeaderboardEntry => {
       const user = userMap.get(round.uid)
       const pts = pointsMap.get(round.uid)
       return {
@@ -92,15 +86,15 @@ export function useMonthLeaderboard(
         netScore: round.netScore,
         grossPoints: pts?.grossPoints ?? 0,
         netPoints: pts?.netPoints ?? 0,
-        totalPoints: (pts?.grossPoints ?? 0) + (pts?.netPoints ?? 0),
+        totalPoints: pts?.totalMonthlyPoints ?? 0,
         roundsPlayed: 1,
-        rank,
+        rank: round.rank,
       }
     }
 
     return {
-      grossStandings: grossSorted.map((r, i) => makeEntry(r, i + 1)),
-      netStandings: netSorted.map((r, i) => makeEntry(r, i + 1)),
+      grossStandings: grossRanked.map(makeEntry),
+      netStandings: netRanked.map(makeEntry),
     }
   }, [rounds, users, isDemo, isOfficial])
 
@@ -110,14 +104,9 @@ export function useMonthLeaderboard(
 
 export function useSeasonLeaderboard(seasonId: string | undefined) {
   const { isDemo } = useAuth()
+  const { users } = useUsers()
   const [allPoints, setAllPoints] = useState<Points[]>([])
-  const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (isDemo) return
-    getAllUsers().then(setUsers)
-  }, [isDemo])
 
   useEffect(() => {
     if (isDemo || !seasonId) {
@@ -171,13 +160,9 @@ export function useSeasonLeaderboard(seasonId: string | undefined) {
       }
     )
 
-    const grossSorted = [...entries]
-      .sort((a, b) => b.grossPoints - a.grossPoints)
-      .map((e, i) => ({ ...e, rank: i + 1 }))
-
-    const netSorted = [...entries]
-      .sort((a, b) => b.netPoints - a.netPoints)
-      .map((e, i) => ({ ...e, rank: i + 1 }))
+    // Rank with tie handling (higher points = better, so negate for ascending sort)
+    const grossSorted = assignRanks(entries, (e) => -e.grossPoints)
+    const netSorted = assignRanks(entries, (e) => -e.netPoints)
 
     return { grossStandings: grossSorted, netStandings: netSorted }
   }, [allPoints, users, isDemo])

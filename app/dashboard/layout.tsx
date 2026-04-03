@@ -8,6 +8,7 @@ import { MobileNav } from '@/components/layout/MobileNav'
 import { ProfileSetup } from '@/components/auth/ProfileSetup'
 import { InviteGate } from '@/components/auth/InviteGate'
 import { DemoBanner } from '@/components/demo/DemoBanner'
+import { UsersProvider } from '@/contexts/UsersContext'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardLayout({
@@ -49,24 +50,26 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {isDemo && <DemoBanner />}
-      <div className="flex flex-1">
-        {/* Sidebar nav — desktop only */}
-        <aside className={`hidden lg:flex w-60 shrink-0 border-r flex-col fixed ${isDemo ? 'top-10' : 'top-0'} bottom-0 left-0 z-30 bg-background`}>
-          <DashboardNav />
-        </aside>
+    <UsersProvider>
+      <div className="min-h-screen flex flex-col">
+        {isDemo && <DemoBanner />}
+        <div className="flex flex-1">
+          {/* Sidebar nav — desktop only */}
+          <aside className={`hidden lg:flex w-60 shrink-0 border-r flex-col fixed ${isDemo ? 'top-10' : 'top-0'} bottom-0 left-0 z-30 bg-background`}>
+            <DashboardNav />
+          </aside>
 
-        {/* Mobile nav */}
-        <MobileNav />
+          {/* Mobile nav */}
+          <MobileNav />
 
-        {/* Main content */}
-        <main className="flex-1 lg:ml-60">
-          <div className={`${isDemo ? 'pt-24 lg:pt-10' : 'pt-14 lg:pt-0'} pb-20 lg:pb-0`}>
-            {children}
-          </div>
-        </main>
+          {/* Main content */}
+          <main className="flex-1 lg:ml-60">
+            <div className={`${isDemo ? 'pt-24 lg:pt-10' : 'pt-14 lg:pt-0'} pb-20 lg:pb-0`}>
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </UsersProvider>
   )
 }

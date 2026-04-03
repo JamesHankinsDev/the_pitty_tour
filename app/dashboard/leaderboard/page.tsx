@@ -76,7 +76,7 @@ function LeaderboardRow({
         {type === 'gross' && entry.grossScore !== undefined ? (
           <>
             <p className="font-bold">{entry.grossScore}</p>
-            <p className="text-xs text-muted-foreground">{entry.grossPoints} pts</p>
+            <p className="text-xs text-muted-foreground">gross</p>
           </>
         ) : type === 'net' && entry.netScore !== undefined ? (
           <>
@@ -85,9 +85,7 @@ function LeaderboardRow({
           </>
         ) : (
           <>
-            <p className="font-bold">
-              {type === 'gross' ? entry.grossPoints : entry.netPoints}
-            </p>
+            <p className="font-bold">{entry.netPoints}</p>
             <p className="text-xs text-muted-foreground">pts</p>
           </>
         )}
@@ -273,10 +271,10 @@ export default function LeaderboardPage() {
           <Tabs defaultValue="gross">
             <TabsList className="w-full">
               <TabsTrigger value="gross" className="flex-1">
-                Gross Championship
+                Gross Standings
               </TabsTrigger>
               <TabsTrigger value="net" className="flex-1">
-                Net Championship
+                Points Standings
               </TabsTrigger>
             </TabsList>
 

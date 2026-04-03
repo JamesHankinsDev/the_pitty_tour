@@ -23,6 +23,7 @@ const adminNav = [
   { href: '/admin/seasons', label: 'Seasons', icon: Calendar },
   { href: '/admin/rounds', label: 'Rounds', icon: ClipboardList },
   { href: '/admin/prize-pool', label: 'Prize Pool', icon: DollarSign },
+  { href: '/admin/payouts', label: 'Payouts', icon: DollarSign },
   { href: '/admin/invites', label: 'Invites', icon: Mail },
 ]
 
