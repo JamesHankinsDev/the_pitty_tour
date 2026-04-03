@@ -20,6 +20,7 @@ import {
   MessageSquare,
   MapPin,
   Calendar,
+  Stamp,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ const navSections = [
     label: "Me",
     items: [
       { href: "/dashboard/my-qr", label: "My QR Code", icon: QrCode },
+      { href: "/dashboard/marker-passport", label: "Marker Passport", icon: Stamp },
       { href: "/dashboard/profile", label: "Profile", icon: User },
     ],
   },
