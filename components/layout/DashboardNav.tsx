@@ -18,6 +18,7 @@ import {
   LogOut,
   MessageSquare,
   MapPin,
+  Calendar,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ const navSections = [
       { href: "/dashboard/prize-pool", label: "Prize Pool", icon: DollarSign },
       { href: "/dashboard/messages", label: "Tour Board", icon: MessageSquare },
       { href: "/dashboard/courses", label: "Courses", icon: MapPin },
+      { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
     ],
   },
   {
