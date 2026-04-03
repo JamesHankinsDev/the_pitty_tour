@@ -9,6 +9,7 @@ import {
   addAttestation,
   createNotification,
 } from '@/lib/firebase/firestore'
+import { sendPush } from '@/lib/firebase/push'
 import { getCurrentMonthKey, formatMonthKey } from '@/lib/utils/dates'
 import { QRScanner } from '@/components/qr/QRScanner'
 import { RoundCard } from '@/components/rounds/RoundCard'
@@ -111,16 +112,23 @@ export default function AttestPage() {
       toast.success(`🎉 ${scannedPlayer?.displayName}'s round is now VALID!`)
 
       // Notify the round owner their round was attested
+      const attestBody = `${profile.displayName} attested your round at ${round.courseName}. It's now valid!`
       createNotification({
         recipientUid: round.uid,
         type: 'round_attested',
         title: 'Round Attested!',
-        body: `${profile.displayName} attested your round at ${round.courseName}. It's now valid!`,
+        body: attestBody,
         link: '/dashboard/my-rounds',
         actorUid: user.uid,
         actorName: profile.displayName,
         actorPhotoURL: profile.photoURL,
       }).catch(() => {})
+      sendPush({
+        recipientUids: [round.uid],
+        title: 'Round Attested!',
+        body: attestBody,
+        link: '/dashboard/my-rounds',
+      })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Attestation failed.'
       toast.error(msg)

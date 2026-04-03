@@ -9,6 +9,7 @@ import { ProfileSetup } from '@/components/auth/ProfileSetup'
 import { InviteGate } from '@/components/auth/InviteGate'
 import { DemoBanner } from '@/components/demo/DemoBanner'
 import { UsersProvider } from '@/contexts/UsersContext'
+import { PushPrompt } from '@/components/notifications/PushPrompt'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardLayout({
@@ -69,6 +70,8 @@ export default function DashboardLayout({
             </div>
           </main>
         </div>
+        {/* Push notification prompt */}
+        <PushPrompt />
       </div>
     </UsersProvider>
   )

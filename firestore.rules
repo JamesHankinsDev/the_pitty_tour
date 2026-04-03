@@ -94,6 +94,13 @@ service cloud.firestore {
       allow write: if admin();
     }
 
+    // ─── Push Tokens ─────────────────────────────────────────────────────
+    match /pushTokens/{tokenId} {
+      allow read: if authed();
+      allow create, update: if authed();
+      allow delete: if authed();
+    }
+
     // ─── Notifications ───────────────────────────────────────────────────
     match /notifications/{notifId} {
       allow read: if authed();

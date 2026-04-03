@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
 import { submitRound, notifyAllPlayers, subscribeToCourses } from '@/lib/firebase/firestore'
+import { sendPushToAll } from '@/lib/firebase/push'
 import type { Course } from '@/lib/types'
 import {
   calculateNetScore,
@@ -181,15 +182,21 @@ export default function SubmitRoundPage() {
       } else {
         toast.success('Round submitted! Now get a partner to attest it.')
         // Only notify for 18-hole tour rounds
+        const pushBody = `${profile.displayName} shot ${data.grossScore} at ${data.courseName}`
         notifyAllPlayers({
           type: 'round_submitted',
           title: 'New Round Submitted',
-          body: `${profile.displayName} shot ${data.grossScore} at ${data.courseName}`,
+          body: pushBody,
           link: '/dashboard/leaderboard',
           actorUid: user.uid,
           actorName: profile.displayName,
           actorPhotoURL: profile.photoURL,
         }, user.uid).catch(() => {})
+        sendPushToAll(user.uid, {
+          title: 'New Round Submitted',
+          body: pushBody,
+          link: '/dashboard/leaderboard',
+        })
       }
     } catch (err) {
       toast.error('Failed to submit round. Please try again.')

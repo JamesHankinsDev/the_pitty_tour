@@ -10,6 +10,7 @@ import {
   subscribeToLFGPlayers,
   notifyAllPlayers,
 } from '@/lib/firebase/firestore'
+import { sendPushToAll } from '@/lib/firebase/push'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -269,17 +270,23 @@ export default function MessagesPage() {
         toast.success('Looking for Partner is on! Other players can see you.')
 
         // Notify all players
+        const lfgBody = note
+          ? `${profile.displayName} is looking for a partner: "${note}"`
+          : `${profile.displayName} is looking for a playing partner!`
         notifyAllPlayers({
           type: 'lfg',
           title: 'Looking for Partner',
-          body: note
-            ? `${profile.displayName} is looking for a partner: "${note}"`
-            : `${profile.displayName} is looking for a playing partner!`,
+          body: lfgBody,
           link: '/dashboard/messages',
           actorUid: user.uid,
           actorName: profile.displayName,
           actorPhotoURL: profile.photoURL,
         }, user.uid).catch(() => {})
+        sendPushToAll(user.uid, {
+          title: 'Looking for Partner',
+          body: lfgBody,
+          link: '/dashboard/messages',
+        })
       } else {
         toast.success('Looking for Partner turned off.')
       }

@@ -25,6 +25,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "firebase": "^10.12.0",
+    "firebase-admin": "^13.7.0",
     "ghin": "^0.7.0",
     "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
