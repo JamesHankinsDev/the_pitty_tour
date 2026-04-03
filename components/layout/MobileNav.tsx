@@ -17,6 +17,7 @@ import {
   ClipboardList,
   DollarSign,
   User,
+  Users,
   Shield,
   LogOut,
   MessageSquare,
@@ -55,6 +56,7 @@ const menuSections = [
     items: [
       { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: BarChart3 },
       { href: '/dashboard/prize-pool', label: 'Prize Pool', icon: DollarSign },
+      { href: '/dashboard/players', label: 'Players', icon: Users },
       { href: '/dashboard/messages', label: 'Tour Board', icon: MessageSquare },
       { href: '/dashboard/courses', label: 'Courses', icon: MapPin },
       { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
