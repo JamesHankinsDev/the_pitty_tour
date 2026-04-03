@@ -1,5 +1,13 @@
 import { Timestamp } from 'firebase/firestore'
 
+// ─── Handicap History ────────────────────────────────────────────────────────
+export interface HandicapSnapshot {
+  id: string
+  handicapIndex: number
+  source: 'ghin' | 'manual' | 'initial'
+  recordedAt: Timestamp
+}
+
 // ─── User ────────────────────────────────────────────────────────────────────
 export interface UserProfile {
   uid: string

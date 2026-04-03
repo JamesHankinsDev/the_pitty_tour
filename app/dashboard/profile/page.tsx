@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
-import { updateUserProfile } from '@/lib/firebase/firestore'
+import { updateUserProfile, recordHandicapSnapshot } from '@/lib/firebase/firestore'
+import { HandicapChart } from '@/components/charts/HandicapChart'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -102,12 +103,17 @@ export default function ProfilePage() {
     if (!user) return
     setSaving(true)
     try {
+      const oldIndex = profile?.handicapIndex ?? 0
       await updateUserProfile(user.uid, {
         displayName: data.displayName,
         ghinNumber: data.ghinNumber.trim(),
         handicapIndex: data.handicapIndex,
         venmoHandle: data.venmoHandle,
       })
+      // Record handicap history if it changed
+      if (data.handicapIndex !== oldIndex && data.handicapIndex > 0) {
+        await recordHandicapSnapshot(user.uid, data.handicapIndex, 'manual')
+      }
       await refreshProfile()
       toast.success('Profile updated!')
     } catch {
@@ -340,6 +346,14 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Handicap Trend */}
+      {user && (
+        <HandicapChart
+          uid={user.uid}
+          currentIndex={profile?.handicapIndex ?? 0}
+        />
+      )}
     </div>
   )
 }

@@ -25,6 +25,13 @@ service cloud.firestore {
       allow create: if isMe(uid);
       allow update: if isMe(uid) || admin();
       allow delete: if false;
+
+      // Handicap history subcollection
+      match /handicapHistory/{entryId} {
+        allow read: if authed();
+        allow create: if isMe(uid);
+        allow update, delete: if false;
+      }
     }
 
     // ─── Seasons ─────────────────────────────────────────────────────────

@@ -36,6 +36,7 @@ function guardDemoWrite(action: string): boolean {
   return false
 }
 import type {
+  HandicapSnapshot,
   UserProfile,
   Season,
   Registration,
@@ -115,6 +116,42 @@ export async function getAllUsers(): Promise<UserProfile[]> {
 
 export async function getUserByUid(uid: string): Promise<UserProfile | null> {
   return getUserProfile(uid)
+}
+
+// ─── Handicap History ────────────────────────────────────────────────────────
+
+/**
+ * Record a handicap snapshot. Called whenever handicap changes
+ * (GHIN refresh, manual profile edit, initial setup).
+ */
+export async function recordHandicapSnapshot(
+  uid: string,
+  handicapIndex: number,
+  source: 'ghin' | 'manual' | 'initial'
+): Promise<void> {
+  if (guardDemoWrite('Recording handicap')) return
+  await addDoc(
+    collection(db, COLLECTIONS.USERS, uid, 'handicapHistory'),
+    {
+      handicapIndex,
+      source,
+      recordedAt: serverTimestamp(),
+    }
+  )
+}
+
+/**
+ * Get all handicap snapshots for a player, ordered by date.
+ */
+export async function getHandicapHistory(
+  uid: string
+): Promise<HandicapSnapshot[]> {
+  const q = query(
+    collection(db, COLLECTIONS.USERS, uid, 'handicapHistory'),
+    orderBy('recordedAt', 'asc')
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as HandicapSnapshot))
 }
 
 // ─── Season Operations ────────────────────────────────────────────────────────

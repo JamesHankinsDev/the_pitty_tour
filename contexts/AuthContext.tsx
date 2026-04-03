@@ -9,7 +9,7 @@ import React, {
 } from 'react'
 import { User } from 'firebase/auth'
 import { onAuthChange, signInWithGoogle, signOut } from '@/lib/firebase/auth'
-import { getUserProfile, createUserProfile, updateUserProfile } from '@/lib/firebase/firestore'
+import { getUserProfile, createUserProfile, updateUserProfile, recordHandicapSnapshot } from '@/lib/firebase/firestore'
 import { claimInvite, getInviteByUser } from '@/lib/firebase/invites'
 import { setDemoMode } from '@/lib/firebase/firestore'
 import { DEMO_PROFILE } from '@/lib/demo/data'
@@ -166,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (typeof newIndex === 'number' && newIndex !== userProfile.handicapIndex) {
       await updateUserProfile(userProfile.uid, { handicapIndex: newIndex })
+      await recordHandicapSnapshot(userProfile.uid, newIndex, 'ghin')
       const updated = await getUserProfile(userProfile.uid)
       if (updated) setProfile(updated)
     }
