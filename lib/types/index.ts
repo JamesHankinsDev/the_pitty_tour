@@ -125,6 +125,39 @@ export interface Course {
   favoritedBy: string[]     // uids of players who favorited
 }
 
+// ─── Polls ──────────────────────────────────────────────────────────────────
+export interface Poll {
+  id: string
+  type: 'content'
+  title: string
+  description: string
+  status: 'active' | 'closed'
+  allowMemberOptions: boolean
+  opensAt: Timestamp
+  closesAt: Timestamp
+  createdBy: string
+  createdAt: Timestamp
+}
+
+export interface PollOption {
+  id: string
+  text: string
+  submittedBy: string
+  createdAt: Timestamp
+}
+
+export interface PollVote {
+  optionId: string
+  castAt: Timestamp
+}
+
+export interface PollComment {
+  id: string
+  userId: string
+  text: string
+  createdAt: Timestamp
+}
+
 // ─── Course Reviews ─────────────────────────────────────────────────────────
 export interface CourseReview {
   id: string

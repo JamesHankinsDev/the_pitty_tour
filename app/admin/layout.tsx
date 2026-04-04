@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   ArrowLeft,
   Mail,
+  Vote,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -24,6 +25,7 @@ const adminNav = [
   { href: '/admin/rounds', label: 'Rounds', icon: ClipboardList },
   { href: '/admin/prize-pool', label: 'Prize Pool', icon: DollarSign },
   { href: '/admin/payouts', label: 'Payouts', icon: DollarSign },
+  { href: '/admin/polls', label: 'Polls', icon: Vote },
   { href: '/admin/invites', label: 'Invites', icon: Mail },
 ]
 

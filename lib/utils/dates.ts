@@ -1,4 +1,14 @@
-import { format, getMonth, getYear, endOfMonth, differenceInDays } from 'date-fns'
+import {
+  format,
+  getMonth,
+  getYear,
+  endOfMonth,
+  differenceInDays,
+  differenceInHours,
+  differenceInMinutes,
+  isPast,
+  isFuture,
+} from 'date-fns'
 
 /**
  * Returns the current month key e.g. "2024-05"
@@ -88,4 +98,33 @@ export function formatTimestampFull(
 ): string {
   if (!ts) return '—'
   return format(new Date(ts.seconds * 1000), 'MMM d, yyyy h:mm a')
+}
+
+/**
+ * Format a relative time string from a Firebase Timestamp.
+ * Returns strings like: "Closes in 3 days", "Opened 2 hours ago", "Closed 4 days ago"
+ */
+export function formatRelativeTime(
+  ts: { seconds: number; nanoseconds?: number } | undefined,
+  prefix = '',
+  suffix = ''
+): string {
+  if (!ts) return '—'
+  const date = new Date(ts.seconds * 1000)
+  const now = new Date()
+
+  if (isFuture(date)) {
+    const days = differenceInDays(date, now)
+    if (days >= 1) return `${prefix}${days} day${days !== 1 ? 's' : ''}${suffix}`
+    const hours = differenceInHours(date, now)
+    if (hours >= 1) return `${prefix}${hours} hour${hours !== 1 ? 's' : ''}${suffix}`
+    const mins = differenceInMinutes(date, now)
+    return `${prefix}${Math.max(mins, 1)} min${mins !== 1 ? 's' : ''}${suffix}`
+  }
+
+  const days = differenceInDays(now, date)
+  if (days >= 1) return `${days} day${days !== 1 ? 's' : ''} ago`
+  const hours = differenceInHours(now, date)
+  if (hours >= 1) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  return 'just now'
 }

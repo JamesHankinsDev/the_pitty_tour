@@ -23,6 +23,7 @@ import {
   Stamp,
   Award,
   Medal,
+  Vote,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,12 @@ const navSections = [
       { href: "/dashboard/courses", label: "Courses", icon: MapPin },
       { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
       { href: "/dashboard/highlights", label: "Highlights", icon: Award },
+    ],
+  },
+  {
+    label: "Community",
+    items: [
+      { href: "/dashboard/polls", label: "Polls", icon: Vote },
     ],
   },
   {

@@ -143,6 +143,36 @@ service cloud.firestore {
       }
     }
 
+    // ─── Polls ───────────────────────────────────────────────────────────
+    match /polls/{pollId} {
+      allow read: if authed();
+      allow create, update, delete: if admin();
+
+      // Options subcollection
+      match /options/{optionId} {
+        allow read: if authed();
+        // Members can add options only if parent poll allows it
+        allow create: if authed()
+          && get(/databases/$(database)/documents/polls/$(pollId)).data.allowMemberOptions == true;
+        allow update, delete: if admin();
+      }
+
+      // Votes subcollection — doc ID must be the voter's uid
+      match /votes/{voterId} {
+        allow read: if authed();
+        allow create, update: if isMe(voterId);
+        allow delete: if false;
+      }
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if authed();
+        allow create: if authed();
+        allow delete: if authed();
+        allow update: if false;
+      }
+    }
+
     // ─── Messages ────────────────────────────────────────────────────────
     match /messages/{messageId} {
       allow read: if authed();

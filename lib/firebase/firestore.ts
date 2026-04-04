@@ -38,6 +38,10 @@ function guardDemoWrite(action: string): boolean {
 import type {
   HandicapSnapshot,
   CourseReview,
+  Poll,
+  PollOption as PollOptionType,
+  PollVote,
+  PollComment,
   UserProfile,
   Season,
   Registration,
@@ -63,6 +67,7 @@ export const COLLECTIONS = {
   NOTIFICATIONS: 'notifications',
   NOTIFICATION_READS: 'notificationReads',
   COURSES: 'courses',
+  POLLS: 'polls',
   PAYOUTS: 'payouts',
   MONTH_CLOSES: 'monthCloses',
 } as const
@@ -877,4 +882,141 @@ export async function deleteCourseReview(
 ): Promise<void> {
   if (guardDemoWrite('Deleting reviews')) return
   await deleteDoc(doc(db, COLLECTIONS.COURSES, courseId, 'reviews', reviewId))
+}
+
+// ─── Polls ──────────────────────────────────────────────────────────────────
+
+// Admin: create a poll + initial options
+export async function createPoll(
+  data: Omit<Poll, 'id' | 'createdAt'>,
+  initialOptions: string[]
+): Promise<string> {
+  if (guardDemoWrite('Creating polls')) return ''
+  const ref = await addDoc(collection(db, COLLECTIONS.POLLS), {
+    ...data,
+    createdAt: serverTimestamp(),
+  })
+  // Write initial options
+  for (const text of initialOptions) {
+    await addDoc(collection(db, COLLECTIONS.POLLS, ref.id, 'options'), {
+      text,
+      submittedBy: data.createdBy,
+      createdAt: serverTimestamp(),
+    })
+  }
+  return ref.id
+}
+
+// Admin: close a poll
+export async function closePoll(pollId: string): Promise<void> {
+  if (guardDemoWrite('Closing polls')) return
+  await updateDoc(doc(db, COLLECTIONS.POLLS, pollId), { status: 'closed' })
+}
+
+// Subscribe to all polls
+export function subscribeToPolls(callback: (polls: Poll[]) => void) {
+  const q = query(
+    collection(db, COLLECTIONS.POLLS),
+    orderBy('createdAt', 'desc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Poll)))
+  }, (err) => {
+    console.warn('Polls subscription error:', err.message)
+    callback([])
+  })
+}
+
+// Subscribe to poll options
+export function subscribeToPollOptions(
+  pollId: string,
+  callback: (options: PollOptionType[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.POLLS, pollId, 'options'),
+    orderBy('createdAt', 'asc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PollOptionType)))
+  }, (err) => {
+    console.warn('Poll options error:', err.message)
+    callback([])
+  })
+}
+
+// Subscribe to poll votes
+export function subscribeToPollVotes(
+  pollId: string,
+  callback: (votes: Map<string, PollVote>) => void
+) {
+  return onSnapshot(
+    collection(db, COLLECTIONS.POLLS, pollId, 'votes'),
+    (snap) => {
+      const map = new Map<string, PollVote>()
+      snap.docs.forEach((d) => map.set(d.id, d.data() as PollVote))
+      callback(map)
+    },
+    (err) => {
+      console.warn('Poll votes error:', err.message)
+      callback(new Map())
+    }
+  )
+}
+
+// Cast a vote (doc ID = uid for one-vote-per-member)
+export async function castVote(
+  pollId: string,
+  uid: string,
+  optionId: string
+): Promise<void> {
+  if (guardDemoWrite('Voting')) return
+  await setDoc(doc(db, COLLECTIONS.POLLS, pollId, 'votes', uid), {
+    optionId,
+    castAt: serverTimestamp(),
+  })
+}
+
+// Add a member-suggested option
+export async function addPollOption(
+  pollId: string,
+  text: string,
+  submittedBy: string
+): Promise<void> {
+  if (guardDemoWrite('Adding poll options')) return
+  await addDoc(collection(db, COLLECTIONS.POLLS, pollId, 'options'), {
+    text: text.trim(),
+    submittedBy,
+    createdAt: serverTimestamp(),
+  })
+}
+
+// Subscribe to poll comments
+export function subscribeToPollComments(
+  pollId: string,
+  callback: (comments: PollComment[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.POLLS, pollId, 'comments'),
+    orderBy('createdAt', 'desc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PollComment)))
+  }, (err) => {
+    console.warn('Poll comments error:', err.message)
+    callback([])
+  })
+}
+
+// Add a comment
+export async function addPollComment(
+  pollId: string,
+  userId: string,
+  text: string
+): Promise<void> {
+  if (guardDemoWrite('Commenting')) return
+  await addDoc(collection(db, COLLECTIONS.POLLS, pollId, 'comments'), {
+    userId,
+    text: text.trim(),
+    createdAt: serverTimestamp(),
+  })
 }
