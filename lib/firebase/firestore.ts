@@ -42,6 +42,10 @@ import type {
   PollOption as PollOptionType,
   PollVote,
   PollComment,
+  Election,
+  Candidate,
+  CurrentOfficer,
+  FlaggedRound,
   UserProfile,
   Season,
   Registration,
@@ -68,6 +72,8 @@ export const COLLECTIONS = {
   NOTIFICATION_READS: 'notificationReads',
   COURSES: 'courses',
   POLLS: 'polls',
+  CURRENT_OFFICERS: 'currentOfficers',
+  FLAGGED_ROUNDS: 'flaggedRounds',
   PAYOUTS: 'payouts',
   MONTH_CLOSES: 'monthCloses',
 } as const
@@ -1019,4 +1025,243 @@ export async function addPollComment(
     text: text.trim(),
     createdAt: serverTimestamp(),
   })
+}
+
+
+// ─── Elections ──────────────────────────────────────────────────────────────
+
+export async function createElection(
+  data: Omit<Election, 'id' | 'createdAt'>
+): Promise<string> {
+  if (guardDemoWrite('Creating elections')) return ''
+  const ref = await addDoc(collection(db, COLLECTIONS.POLLS), {
+    ...data,
+    createdAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function subscribeToElections(callback: (elections: Election[]) => void) {
+  const q = query(
+    collection(db, COLLECTIONS.POLLS),
+    where('type', '==', 'election'),
+    orderBy('createdAt', 'desc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Election)))
+  }, (err) => {
+    console.warn('Elections subscription error:', err.message)
+    callback([])
+  })
+}
+
+export async function updateElectionStatus(
+  pollId: string,
+  status: 'nomination' | 'active' | 'closed'
+): Promise<void> {
+  if (guardDemoWrite('Updating elections')) return
+  await updateDoc(doc(db, COLLECTIONS.POLLS, pollId), { status })
+}
+
+// Candidates subcollection
+export function subscribeToCandidates(
+  pollId: string,
+  callback: (candidates: Candidate[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.POLLS, pollId, 'candidates'),
+    orderBy('nominatedAt', 'asc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Candidate)))
+  }, (err) => {
+    console.warn('Candidates error:', err.message)
+    callback([])
+  })
+}
+
+export async function nominateCandidate(
+  pollId: string,
+  userId: string,
+  nominatedBy: string
+): Promise<void> {
+  if (guardDemoWrite('Nominating')) return
+  await addDoc(collection(db, COLLECTIONS.POLLS, pollId, 'candidates'), {
+    userId,
+    nominatedBy,
+    acceptedNomination: false,
+    nominatedAt: serverTimestamp(),
+    acceptedAt: null,
+    declinedAt: null,
+  })
+}
+
+export async function respondToNomination(
+  pollId: string,
+  candidateId: string,
+  accept: boolean
+): Promise<void> {
+  if (guardDemoWrite('Responding to nomination')) return
+  await updateDoc(
+    doc(db, COLLECTIONS.POLLS, pollId, 'candidates', candidateId),
+    {
+      acceptedNomination: accept,
+      ...(accept
+        ? { acceptedAt: serverTimestamp(), declinedAt: null }
+        : { declinedAt: serverTimestamp(), acceptedAt: null }),
+    }
+  )
+}
+
+// Election votes (reuses same votes subcollection as polls)
+export async function castElectionVote(
+  pollId: string,
+  uid: string,
+  candidateId: string
+): Promise<void> {
+  if (guardDemoWrite('Voting')) return
+  await setDoc(doc(db, COLLECTIONS.POLLS, pollId, 'votes', uid), {
+    optionId: candidateId,
+    castAt: serverTimestamp(),
+  })
+}
+
+// Current Officers
+export function subscribeToCurrentOfficers(
+  callback: (officers: CurrentOfficer[]) => void
+) {
+  return onSnapshot(
+    collection(db, COLLECTIONS.CURRENT_OFFICERS),
+    (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CurrentOfficer)))
+    },
+    (err) => {
+      console.warn('Officers error:', err.message)
+      callback([])
+    }
+  )
+}
+
+// Close election: tally votes, assign role, write officer record
+export async function closeElection(
+  election: Election,
+  closedByUid: string
+): Promise<{ winnerId: string; winnerName: string } | null> {
+  if (guardDemoWrite('Closing elections')) return null
+
+  // 1. Get all votes
+  const votesSnap = await getDocs(
+    collection(db, COLLECTIONS.POLLS, election.id, 'votes')
+  )
+  if (votesSnap.empty) return null
+
+  // 2. Tally votes by candidate
+  const tally = new Map<string, number>()
+  votesSnap.docs.forEach((d) => {
+    const v = d.data() as PollVote
+    tally.set(v.optionId, (tally.get(v.optionId) ?? 0) + 1)
+  })
+
+  // 3. Find winner (most votes)
+  let winnerId = ''
+  let maxVotes = 0
+  for (const [candidateId, count] of tally) {
+    if (count > maxVotes) {
+      maxVotes = count
+      winnerId = candidateId
+    }
+  }
+
+  // 4. Get the candidate doc to find the userId
+  const candidateSnap = await getDoc(
+    doc(db, COLLECTIONS.POLLS, election.id, 'candidates', winnerId)
+  )
+  if (!candidateSnap.exists()) return null
+  const winnerUserId = (candidateSnap.data() as Candidate).userId
+
+  // 5. Get winner's name
+  const winnerProfile = await getUserProfile(winnerUserId)
+  const winnerName = winnerProfile?.displayName ?? 'Unknown'
+
+  const batch = writeBatch(db)
+  const now = Timestamp.now()
+
+  // 6. Remove role from previous holder
+  const officersSnap = await getDocs(
+    query(
+      collection(db, COLLECTIONS.CURRENT_OFFICERS),
+      where('officeKey', '==', election.officeKey)
+    )
+  )
+  for (const od of officersSnap.docs) {
+    const prevUserId = (od.data() as CurrentOfficer).userId
+    // Remove role from previous holder's user doc
+    const prevProfile = await getUserProfile(prevUserId)
+    if (prevProfile?.roles?.includes(election.officeKey)) {
+      batch.update(doc(db, COLLECTIONS.USERS, prevUserId), {
+        roles: (prevProfile.roles ?? []).filter((r) => r !== election.officeKey),
+      })
+    }
+    batch.delete(od.ref)
+  }
+
+  // 7. Add role to winner's user doc
+  const winnerRoles = winnerProfile?.roles ?? []
+  if (!winnerRoles.includes(election.officeKey)) {
+    batch.update(doc(db, COLLECTIONS.USERS, winnerUserId), {
+      roles: [...winnerRoles, election.officeKey],
+    })
+  }
+
+  // 8. Write currentOfficers record
+  batch.set(doc(collection(db, COLLECTIONS.CURRENT_OFFICERS)), {
+    officeKey: election.officeKey,
+    officeTitle: election.officeTitle,
+    userId: winnerUserId,
+    termStartedAt: now,
+    electionId: election.id,
+  })
+
+  // 9. Mark election as closed
+  batch.update(doc(db, COLLECTIONS.POLLS, election.id), { status: 'closed' })
+
+  await batch.commit()
+
+  return { winnerId: winnerUserId, winnerName }
+}
+
+// ─── Flagged Rounds ─────────────────────────────────────────────────────────
+
+export async function flagRound(
+  roundId: string,
+  flaggedBy: string,
+  reason: string
+): Promise<void> {
+  if (guardDemoWrite('Flagging rounds')) return
+  await addDoc(collection(db, COLLECTIONS.FLAGGED_ROUNDS), {
+    roundId,
+    flaggedBy,
+    reason: reason.trim(),
+    flaggedAt: serverTimestamp(),
+  })
+}
+
+export function subscribeToFlaggedRounds(
+  callback: (flags: FlaggedRound[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.FLAGGED_ROUNDS),
+    orderBy('flaggedAt', 'desc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as FlaggedRound)))
+  }, (err) => {
+    console.warn('Flagged rounds error:', err.message)
+    callback([])
+  })
+}
+
+export async function dismissFlag(flagId: string): Promise<void> {
+  if (guardDemoWrite('Dismissing flags')) return
+  await deleteDoc(doc(db, COLLECTIONS.FLAGGED_ROUNDS, flagId))
 }

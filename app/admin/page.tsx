@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
-import { getAllUsers, getSeasonRegistrations, getSeasonRounds } from '@/lib/firebase/firestore'
+import { getAllUsers, getSeasonRegistrations, getSeasonRounds, subscribeToFlaggedRounds, dismissFlag } from '@/lib/firebase/firestore'
 import { getCurrentMonthKey, formatMonthKey, daysRemainingInMonth } from '@/lib/utils/dates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -19,7 +19,7 @@ import {
   TrendingUp,
   AlertTriangle,
 } from 'lucide-react'
-import type { UserProfile, Registration, Round } from '@/lib/types'
+import type { UserProfile, Registration, Round, FlaggedRound } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,7 +66,13 @@ export default function AdminOverview() {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [regs, setRegs] = useState<Registration[]>([])
   const [rounds, setRounds] = useState<Round[]>([])
+  const [flags, setFlags] = useState<FlaggedRound[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const unsub = subscribeToFlaggedRounds(setFlags)
+    return unsub
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -234,6 +240,44 @@ export default function AdminOverview() {
                 </Link>
               </Button>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Flagged Rounds */}
+      {flags.length > 0 && (
+        <Card className="border-red-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2 text-red-700">
+              <Flag className="w-4 h-4" />
+              Flagged Rounds ({flags.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {flags.slice(0, 5).map((flag) => {
+              const flaggedRound = rounds.find((r) => r.id === flag.roundId)
+              const flaggedByUser = users.find((u) => u.uid === flag.flaggedBy)
+              return (
+                <div key={flag.id} className="flex items-center justify-between p-2 bg-red-50 rounded text-sm">
+                  <div>
+                    <p className="font-medium">
+                      {flaggedRound?.courseName ?? flag.roundId.slice(0, 8)}
+                      {flaggedRound && ` (${flaggedRound.grossScore})`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Flagged by {flaggedByUser?.displayName ?? 'Unknown'}
+                      {flag.reason && ` — "${flag.reason}"`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => dismissFlag(flag.id)}
+                    className="text-xs text-muted-foreground hover:text-foreground px-2 py-1"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
       )}

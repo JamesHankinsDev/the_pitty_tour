@@ -26,6 +26,7 @@ const adminNav = [
   { href: '/admin/prize-pool', label: 'Prize Pool', icon: DollarSign },
   { href: '/admin/payouts', label: 'Payouts', icon: DollarSign },
   { href: '/admin/polls', label: 'Polls', icon: Vote },
+  { href: '/admin/elections', label: 'Elections', icon: Vote },
   { href: '/admin/invites', label: 'Invites', icon: Mail },
 ]
 

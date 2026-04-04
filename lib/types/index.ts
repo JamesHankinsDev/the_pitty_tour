@@ -22,6 +22,7 @@ export interface UserProfile {
   totalPoints: number
   isAdmin: boolean
   inviteToken: string // token used at registration; '' for seed/legacy users
+  roles?: string[]   // e.g. ['treasurer', 'master_at_arms']
   lookingForPartner?: boolean        // true = actively seeking a playing partner
   lookingForPartnerNote?: string     // optional context e.g. "Saturday AM at Bethpage"
   lookingForPartnerAt?: Timestamp    // when the flag was set
@@ -156,6 +157,45 @@ export interface PollComment {
   userId: string
   text: string
   createdAt: Timestamp
+}
+
+// ─── Elections ──────────────────────────────────────────────────────────────
+export interface Election extends Omit<Poll, 'type' | 'status'> {
+  type: 'election'
+  officeTitle: string        // e.g. 'Treasurer'
+  officeKey: string          // e.g. 'treasurer'
+  status: 'nomination' | 'active' | 'closed'
+  nominationsOpenAt: Timestamp
+  nominationsCloseAt: Timestamp
+  votingOpenAt: Timestamp
+  votingCloseAt: Timestamp
+}
+
+export interface Candidate {
+  id: string
+  userId: string
+  nominatedBy: string
+  acceptedNomination: boolean
+  nominatedAt: Timestamp
+  acceptedAt: Timestamp | null
+  declinedAt: Timestamp | null
+}
+
+export interface CurrentOfficer {
+  id: string
+  officeKey: string
+  officeTitle: string
+  userId: string
+  termStartedAt: Timestamp
+  electionId: string
+}
+
+export interface FlaggedRound {
+  id: string
+  roundId: string
+  flaggedBy: string
+  reason: string
+  flaggedAt: Timestamp
 }
 
 // ─── Course Reviews ─────────────────────────────────────────────────────────

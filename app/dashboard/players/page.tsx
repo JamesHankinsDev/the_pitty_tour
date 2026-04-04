@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Users, Search, MapPin } from 'lucide-react'
+import { RoleBadge } from '@/components/elections/RoleBadge'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,6 +95,9 @@ export default function PlayersPage() {
                       {player.isAdmin && (
                         <Badge variant="outline" className="text-xs">Admin</Badge>
                       )}
+                      {player.roles?.map((role) => (
+                        <RoleBadge key={role} officeKey={role} />
+                      ))}
                       {isLfg && (
                         <Badge variant="warning" className="text-xs flex items-center gap-1">
                           <MapPin className="w-3 h-3" />

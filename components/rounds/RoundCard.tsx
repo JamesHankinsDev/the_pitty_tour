@@ -4,12 +4,14 @@ import type { Round } from '@/lib/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatTimestamp, formatMonthKey } from '@/lib/utils/dates'
-import { CheckCircle2, Clock, MapPin, User, Trophy, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, MapPin, User, Trophy, XCircle, Flag } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface RoundCardProps {
   round: Round
   showActions?: boolean
   compact?: boolean
+  onFlag?: (roundId: string) => void
 }
 
 function AttestationPips({ count, required = 1 }: { count: number; required?: number }) {
@@ -30,7 +32,7 @@ function AttestationPips({ count, required = 1 }: { count: number; required?: nu
   )
 }
 
-export function RoundCard({ round, compact = false }: RoundCardProps) {
+export function RoundCard({ round, compact = false, onFlag }: RoundCardProps) {
   const attestCount = round.attestations.length
   const isValid = round.isValid
 
@@ -153,6 +155,18 @@ export function RoundCard({ round, compact = false }: RoundCardProps) {
         {round.adminOverride && round.adminOverrideNote && (
           <div className="mt-2 p-2 bg-yellow-50 rounded text-xs text-yellow-800">
             Admin note: {round.adminOverrideNote}
+          </div>
+        )}
+
+        {onFlag && !compact && (
+          <div className="mt-2 pt-2 border-t">
+            <button
+              onClick={() => onFlag(round.id)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-600 transition-colors"
+            >
+              <Flag className="w-3.5 h-3.5" />
+              Flag for review
+            </button>
           </div>
         )}
       </CardContent>

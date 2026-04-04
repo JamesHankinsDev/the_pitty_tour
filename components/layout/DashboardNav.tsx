@@ -24,6 +24,7 @@ import {
   Award,
   Medal,
   Vote,
+  Scale,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,9 @@ const navSections = [
   {
     label: "Community",
     items: [
+      { href: "/dashboard/officers", label: "Officers", icon: Shield },
       { href: "/dashboard/polls", label: "Polls", icon: Vote },
+      { href: "/dashboard/elections", label: "Elections", icon: Vote },
     ],
   },
   {
@@ -132,6 +135,25 @@ export function DashboardNav() {
             </div>
           </div>
         ))}
+
+        {(profile?.roles?.includes('treasurer') || profile?.isAdmin) && (
+          <div className="mt-4 pt-3 border-t">
+            <div className="space-y-0.5">
+              <Link
+                href="/dashboard/treasurer"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                  pathname === "/dashboard/treasurer"
+                    ? "bg-blue-50 text-blue-700 font-semibold"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                <Scale className="w-4 h-4 shrink-0" />
+                Treasurer
+              </Link>
+            </div>
+          </div>
+        )}
 
         {profile?.isAdmin && (
           <div className="mt-4 pt-3 border-t">

@@ -70,7 +70,9 @@ const menuSections = [
   {
     label: 'Community',
     items: [
+      { href: '/dashboard/officers', label: 'Officers', icon: Shield },
       { href: '/dashboard/polls', label: 'Polls', icon: Vote },
+      { href: '/dashboard/elections', label: 'Elections', icon: Vote },
     ],
   },
   {

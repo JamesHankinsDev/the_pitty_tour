@@ -143,6 +143,20 @@ service cloud.firestore {
       }
     }
 
+    // ─── Current Officers ─────────────────────────────────────────────────
+    match /currentOfficers/{officerId} {
+      allow read: if authed();
+      allow write: if admin();
+    }
+
+    // ─── Flagged Rounds ──────────────────────────────────────────────────
+    match /flaggedRounds/{flagId} {
+      allow read: if authed();
+      allow create: if authed();
+      allow delete: if admin();
+      allow update: if false;
+    }
+
     // ─── Polls ───────────────────────────────────────────────────────────
     match /polls/{pollId} {
       allow read: if authed();
@@ -155,6 +169,14 @@ service cloud.firestore {
         allow create: if authed()
           && get(/databases/$(database)/documents/polls/$(pollId)).data.allowMemberOptions == true;
         allow update, delete: if admin();
+      }
+
+      // Candidates subcollection (for elections)
+      match /candidates/{candidateId} {
+        allow read: if authed();
+        allow create: if authed();
+        allow update: if authed();
+        allow delete: if admin();
       }
 
       // Votes subcollection — doc ID must be the voter's uid
