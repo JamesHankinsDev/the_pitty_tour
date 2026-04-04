@@ -47,6 +47,7 @@ import type {
   CurrentOfficer,
   FlaggedRound,
   Announcement,
+  ScheduledRound,
   UserProfile,
   Season,
   Registration,
@@ -76,6 +77,7 @@ export const COLLECTIONS = {
   CURRENT_OFFICERS: 'currentOfficers',
   FLAGGED_ROUNDS: 'flaggedRounds',
   ANNOUNCEMENTS: 'announcements',
+  SCHEDULED_ROUNDS: 'scheduledRounds',
   PAYOUTS: 'payouts',
   MONTH_CLOSES: 'monthCloses',
 } as const
@@ -1307,4 +1309,63 @@ export function subscribeToAnnouncements(
     console.warn('Announcements error:', err.message)
     callback([])
   })
+}
+
+// ─── Scheduled Rounds ───────────────────────────────────────────────────────
+
+export async function createScheduledRound(
+  data: Omit<ScheduledRound, 'id' | 'createdAt'>
+): Promise<string> {
+  if (guardDemoWrite('Scheduling rounds')) return ''
+  const ref = await addDoc(collection(db, COLLECTIONS.SCHEDULED_ROUNDS), {
+    ...data,
+    createdAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function subscribeToScheduledRounds(
+  callback: (rounds: ScheduledRound[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.SCHEDULED_ROUNDS),
+    orderBy('date', 'asc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduledRound)))
+  }, (err) => {
+    console.warn('Scheduled rounds error:', err.message)
+    callback([])
+  })
+}
+
+export async function joinScheduledRound(
+  roundId: string,
+  uid: string
+): Promise<void> {
+  if (guardDemoWrite('Joining rounds')) return
+  const ref = doc(db, COLLECTIONS.SCHEDULED_ROUNDS, roundId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+  const data = snap.data() as ScheduledRound
+  if (data.players.includes(uid)) return
+  if (data.players.length >= data.spots) return
+  await updateDoc(ref, { players: [...data.players, uid] })
+}
+
+export async function leaveScheduledRound(
+  roundId: string,
+  uid: string
+): Promise<void> {
+  if (guardDemoWrite('Leaving rounds')) return
+  const ref = doc(db, COLLECTIONS.SCHEDULED_ROUNDS, roundId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+  const data = snap.data() as ScheduledRound
+  await updateDoc(ref, { players: data.players.filter((id) => id !== uid) })
+}
+
+export async function deleteScheduledRound(id: string): Promise<void> {
+  if (guardDemoWrite('Deleting scheduled rounds')) return
+  await deleteDoc(doc(db, COLLECTIONS.SCHEDULED_ROUNDS, id))
 }

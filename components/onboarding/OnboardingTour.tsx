@@ -17,6 +17,13 @@ import {
   Stamp,
   Medal,
   MapPin,
+  Calendar,
+  Users,
+  Award,
+  Vote,
+  Megaphone,
+  Bell,
+  TrendingDown,
 } from 'lucide-react'
 
 const STORAGE_KEY = 'pity_onboarding_complete'
@@ -98,6 +105,55 @@ const steps: TourStep[] = [
     title: 'Unlock Achievements',
     description:
       'Earn badges for milestones — your first round, breaking 80, 10 sand saves, playing 5 different courses, and more. Check your progress anytime.',
+  },
+  {
+    icon: Calendar,
+    color: 'bg-blue-100 text-blue-700',
+    title: 'Calendar & Scheduling',
+    description:
+      'View the Tour calendar with scoring deadlines and season events. Schedule rounds with a course, date, and tee time — other players can join with one tap.',
+  },
+  {
+    icon: Users,
+    color: 'bg-green-100 text-green-700',
+    title: 'Tour Players',
+    description:
+      'Browse the player directory to see all Tour members and their handicaps. Spot who\'s looking for a partner with the LFG badge.',
+  },
+  {
+    icon: Award,
+    color: 'bg-yellow-100 text-yellow-700',
+    title: 'Season Highlights',
+    description:
+      'Check out season records — lowest gross, best differential, most sand saves, monthly champions, and more. Updated in real time as rounds come in.',
+  },
+  {
+    icon: TrendingDown,
+    color: 'bg-green-100 text-green-700',
+    title: 'Handicap Trend',
+    description:
+      'Your Profile page includes a handicap trend chart that tracks changes over the season from GHIN syncs and manual updates.',
+  },
+  {
+    icon: Vote,
+    color: 'bg-purple-100 text-purple-700',
+    title: 'Polls & Elections',
+    description:
+      'Vote on community polls for course choices and format ideas. Participate in officer elections — volunteer to run or vote for your preferred candidate.',
+  },
+  {
+    icon: Megaphone,
+    color: 'bg-yellow-100 text-yellow-700',
+    title: 'Announcements',
+    description:
+      'Official Tour updates from the Commissioner\'s Office appear on your dashboard and the Announcements page. Stay in the loop on schedule changes, rules, and events.',
+  },
+  {
+    icon: Bell,
+    color: 'bg-red-100 text-red-700',
+    title: 'Notifications',
+    description:
+      'The bell icon in the top nav shows new round submissions, attestations, LFG requests, and more. Enable push notifications to get alerts on your phone too.',
   },
 ]
 

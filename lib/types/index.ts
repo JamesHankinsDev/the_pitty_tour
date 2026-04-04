@@ -159,6 +159,20 @@ export interface PollComment {
   createdAt: Timestamp
 }
 
+// ─── Scheduled Rounds ───────────────────────────────────────────────────────
+export interface ScheduledRound {
+  id: string
+  hostUid: string
+  hostName: string
+  courseName: string
+  date: string              // "2026-04-15"
+  teeTime: string           // "09:30" (24h format)
+  spots: number             // total spots including host
+  note: string
+  players: string[]         // uids who've joined (host is always first)
+  createdAt: Timestamp
+}
+
 // ─── Announcements ──────────────────────────────────────────────────────────
 export interface Announcement {
   id: string

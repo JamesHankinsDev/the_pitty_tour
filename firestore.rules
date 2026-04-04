@@ -143,6 +143,14 @@ service cloud.firestore {
       }
     }
 
+    // ─── Scheduled Rounds ──────────────────────────────────────────────────
+    match /scheduledRounds/{roundId} {
+      allow read: if authed();
+      allow create: if authed();
+      allow update: if authed();
+      allow delete: if authed();
+    }
+
     // ─── Announcements ────────────────────────────────────────────────────
     match /announcements/{announcementId} {
       allow read: if authed();
