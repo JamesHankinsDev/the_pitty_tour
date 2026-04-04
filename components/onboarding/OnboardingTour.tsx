@@ -12,7 +12,6 @@ import {
   MessageSquare,
   Trophy,
   ChevronRight,
-  ChevronLeft,
   X,
   Stamp,
   Medal,
@@ -28,146 +27,151 @@ import {
 
 const STORAGE_KEY = 'pity_onboarding_complete'
 
-interface TourStep {
+interface Feature {
   icon: React.ElementType
   color: string
   title: string
   description: string
 }
 
-const steps: TourStep[] = [
+interface FeatureGroup {
+  title: string
+  subtitle: string
+  features: Feature[]
+}
+
+const groups: FeatureGroup[] = [
   {
-    icon: Flag,
-    color: 'bg-green-100 text-green-700',
-    title: 'Submit Your Round',
-    description:
-      'After playing 18 holes, submit your score with course details. You can also log 9-hole practice rounds for handicap tracking.',
+    title: 'Play Golf',
+    subtitle: 'Submit scores, get attested, and compete',
+    features: [
+      {
+        icon: Flag,
+        color: 'bg-green-100 text-green-700',
+        title: 'Submit Rounds',
+        description: 'Log 18-hole rounds for monthly events or 9-hole rounds for practice.',
+      },
+      {
+        icon: ScanLine,
+        color: 'bg-blue-100 text-blue-700',
+        title: 'QR Attestation',
+        description: 'A playing partner scans your QR code to verify your score.',
+      },
+      {
+        icon: Trophy,
+        color: 'bg-yellow-100 text-yellow-700',
+        title: 'Select for Scoring',
+        description: 'Pick which of your valid rounds counts for the monthly leaderboard.',
+      },
+      {
+        icon: Calendar,
+        color: 'bg-blue-100 text-blue-700',
+        title: 'Schedule Rounds',
+        description: 'Post a tee time and course — other players can join with one tap.',
+      },
+    ],
   },
   {
-    icon: ScanLine,
-    color: 'bg-blue-100 text-blue-700',
-    title: 'Get Attested',
-    description:
-      'Show your QR code to a playing partner. They scan it to verify your score. You need 1 attestation for a round to count.',
+    title: 'Compete & Earn',
+    subtitle: 'Track standings, earn payouts, and unlock badges',
+    features: [
+      {
+        icon: BarChart3,
+        color: 'bg-yellow-100 text-yellow-700',
+        title: 'Leaderboard',
+        description: 'Gross and net standings update in real time throughout the month.',
+      },
+      {
+        icon: DollarSign,
+        color: 'bg-green-100 text-green-700',
+        title: 'Prize Payouts',
+        description: 'Top 3 Net, Top 2 Gross, and skill bonuses for saves and par-3 pars.',
+      },
+      {
+        icon: Medal,
+        color: 'bg-purple-100 text-purple-700',
+        title: 'Achievements',
+        description: '26 badges across bronze, silver, gold, and platinum tiers.',
+      },
+      {
+        icon: Award,
+        color: 'bg-yellow-100 text-yellow-700',
+        title: 'Highlights',
+        description: 'Season records, monthly champions, and personal bests.',
+      },
+    ],
   },
   {
-    icon: QrCode,
-    color: 'bg-purple-100 text-purple-700',
-    title: 'Your QR Code',
-    description:
-      'Find your personal QR code under "My QR Code." Share it with playing partners so they can attest your rounds.',
+    title: 'Community',
+    subtitle: 'Connect with Tour members and stay informed',
+    features: [
+      {
+        icon: MessageSquare,
+        color: 'bg-blue-100 text-blue-700',
+        title: 'Tour Board',
+        description: 'Chat, find a partner with LFG, and stay connected with the Tour.',
+      },
+      {
+        icon: Vote,
+        color: 'bg-purple-100 text-purple-700',
+        title: 'Polls & Elections',
+        description: 'Vote on course choices, format ideas, and Tour officer elections.',
+      },
+      {
+        icon: Megaphone,
+        color: 'bg-yellow-100 text-yellow-700',
+        title: 'Announcements',
+        description: 'Official updates from the Commissioner\'s Office.',
+      },
+      {
+        icon: Bell,
+        color: 'bg-red-100 text-red-700',
+        title: 'Notifications',
+        description: 'In-app bell and push alerts for rounds, attestations, and LFG.',
+      },
+    ],
   },
   {
-    icon: BarChart3,
-    color: 'bg-yellow-100 text-yellow-700',
-    title: 'Track the Leaderboard',
-    description:
-      'The leaderboard shows unofficial standings during the month based on everyone\'s best round. It becomes official when the month closes.',
-  },
-  {
-    icon: DollarSign,
-    color: 'bg-green-100 text-green-700',
-    title: 'Earn Payouts',
-    description:
-      'Each month, 60% of dues go to the performance purse — Top 3 Net, Top 2 Gross, and Skill Bonuses for sand saves and par-3 pars.',
-  },
-  {
-    icon: Trophy,
-    color: 'bg-yellow-100 text-yellow-700',
-    title: 'Select Your Scoring Round',
-    description:
-      'If you play multiple rounds in a month, go to "My Rounds" and select the one you want to count for monthly scoring.',
-  },
-  {
-    icon: Stamp,
-    color: 'bg-orange-100 text-orange-700',
-    title: 'Marker Passport',
-    description:
-      'Play with different Tour members throughout the season. You need at least 4 unique markers, and each earns you 5 bonus points.',
-  },
-  {
-    icon: MessageSquare,
-    color: 'bg-blue-100 text-blue-700',
-    title: 'Tour Board & LFG',
-    description:
-      'Chat with the Tour on the Tour Board. Toggle "Looking for Partner" when you need someone to play with — everyone gets notified.',
-  },
-  {
-    icon: MapPin,
-    color: 'bg-red-100 text-red-700',
-    title: 'Course Directory',
-    description:
-      'Browse and add courses with green fees, ratings, and booking links. Leave reviews to help fellow Tour members find great tracks.',
-  },
-  {
-    icon: Medal,
-    color: 'bg-purple-100 text-purple-700',
-    title: 'Unlock Achievements',
-    description:
-      'Earn badges for milestones — your first round, breaking 80, 10 sand saves, playing 5 different courses, and more. Check your progress anytime.',
-  },
-  {
-    icon: Calendar,
-    color: 'bg-blue-100 text-blue-700',
-    title: 'Calendar & Scheduling',
-    description:
-      'View the Tour calendar with scoring deadlines and season events. Schedule rounds with a course, date, and tee time — other players can join with one tap.',
-  },
-  {
-    icon: Users,
-    color: 'bg-green-100 text-green-700',
-    title: 'Tour Players',
-    description:
-      'Browse the player directory to see all Tour members and their handicaps. Spot who\'s looking for a partner with the LFG badge.',
-  },
-  {
-    icon: Award,
-    color: 'bg-yellow-100 text-yellow-700',
-    title: 'Season Highlights',
-    description:
-      'Check out season records — lowest gross, best differential, most sand saves, monthly champions, and more. Updated in real time as rounds come in.',
-  },
-  {
-    icon: TrendingDown,
-    color: 'bg-green-100 text-green-700',
-    title: 'Handicap Trend',
-    description:
-      'Your Profile page includes a handicap trend chart that tracks changes over the season from GHIN syncs and manual updates.',
-  },
-  {
-    icon: Vote,
-    color: 'bg-purple-100 text-purple-700',
-    title: 'Polls & Elections',
-    description:
-      'Vote on community polls for course choices and format ideas. Participate in officer elections — volunteer to run or vote for your preferred candidate.',
-  },
-  {
-    icon: Megaphone,
-    color: 'bg-yellow-100 text-yellow-700',
-    title: 'Announcements',
-    description:
-      'Official Tour updates from the Commissioner\'s Office appear on your dashboard and the Announcements page. Stay in the loop on schedule changes, rules, and events.',
-  },
-  {
-    icon: Bell,
-    color: 'bg-red-100 text-red-700',
-    title: 'Notifications',
-    description:
-      'The bell icon in the top nav shows new round submissions, attestations, LFG requests, and more. Enable push notifications to get alerts on your phone too.',
+    title: 'Your Profile',
+    subtitle: 'Track your progress and passport',
+    features: [
+      {
+        icon: Stamp,
+        color: 'bg-orange-100 text-orange-700',
+        title: 'Marker Passport',
+        description: 'Play with 4+ unique markers for bonus points. Track your progress.',
+      },
+      {
+        icon: TrendingDown,
+        color: 'bg-green-100 text-green-700',
+        title: 'Handicap Trend',
+        description: 'Chart your handicap changes over the season on your Profile page.',
+      },
+      {
+        icon: MapPin,
+        color: 'bg-red-100 text-red-700',
+        title: 'Course Directory',
+        description: 'Browse courses with green fees, ratings, reviews, and booking links.',
+      },
+      {
+        icon: QrCode,
+        color: 'bg-purple-100 text-purple-700',
+        title: 'Your QR Code',
+        description: 'Share with playing partners so they can attest your rounds.',
+      },
+    ],
   },
 ]
 
 export function OnboardingTour() {
   const { user, isDemo } = useAuth()
   const [show, setShow] = useState(false)
-  const [step, setStep] = useState(0)
+  const [page, setPage] = useState<'welcome' | 'features'>('welcome')
 
   useEffect(() => {
     if (!user && !isDemo) return
-    // Check if onboarding was already completed
     const done = localStorage.getItem(STORAGE_KEY)
     if (!done) {
-      // Delay so the dashboard loads first
       const timer = setTimeout(() => setShow(true), 1500)
       return () => clearTimeout(timer)
     }
@@ -178,110 +182,96 @@ export function OnboardingTour() {
     localStorage.setItem(STORAGE_KEY, 'true')
   }
 
-  const handleSkip = () => {
-    handleComplete()
-  }
-
   if (!show) return null
-
-  const current = steps[step]
-  const Icon = current.icon
-  const isLast = step === steps.length - 1
-  const isFirst = step === 0
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={handleSkip}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleComplete} />
 
-      {/* Card */}
-      <div className="relative bg-background rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-        {/* Progress bar */}
-        <div className="h-1 bg-muted">
-          <div
-            className="h-1 bg-green-500 transition-all duration-300"
-            style={{ width: `${((step + 1) / steps.length) * 100}%` }}
-          />
-        </div>
-
-        {/* Close */}
+      <div className="relative bg-background rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+        {/* Close button */}
         <button
-          onClick={handleSkip}
-          className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors z-10"
+          onClick={handleComplete}
+          className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Content */}
-        <div className="p-6 pt-8 text-center">
-          {/* Step counter */}
-          <p className="text-xs text-muted-foreground mb-4">
-            {step + 1} of {steps.length}
-          </p>
-
-          {/* Icon */}
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${current.color}`}>
-            <Icon className="w-8 h-8" />
+        {/* Welcome page */}
+        {page === 'welcome' && (
+          <div className="p-8 text-center flex-1 flex flex-col items-center justify-center">
+            <div className="w-20 h-20 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <span className="text-white font-black text-3xl">P</span>
+            </div>
+            <h1 className="text-3xl font-black mb-2">Welcome to the PITY Tour</h1>
+            <p className="text-muted-foreground mb-8 max-w-sm">
+              Here&apos;s a quick look at everything you can do. You can always replay this from your Profile.
+            </p>
+            <Button variant="green" size="lg" onClick={() => setPage('features')} className="group">
+              Show Me Around
+              <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
+            <button
+              onClick={handleComplete}
+              className="mt-4 text-sm text-muted-foreground hover:text-foreground"
+            >
+              Skip — I&apos;ll explore on my own
+            </button>
           </div>
+        )}
 
-          {/* Title */}
-          <h2 className="text-xl font-bold mb-2">{current.title}</h2>
+        {/* Features page */}
+        {page === 'features' && (
+          <>
+            <div className="p-5 pb-3 border-b shrink-0">
+              <h2 className="text-lg font-bold">What You Can Do</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Tap any feature to learn more — or just dive in!
+              </p>
+            </div>
 
-          {/* Description */}
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {current.description}
-          </p>
-        </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+              {groups.map((group) => (
+                <div key={group.title}>
+                  <div className="mb-2">
+                    <h3 className="font-semibold text-sm">{group.title}</h3>
+                    <p className="text-xs text-muted-foreground">{group.subtitle}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {group.features.map((feature) => {
+                      const Icon = feature.icon
+                      return (
+                        <div
+                          key={feature.title}
+                          className="p-3 rounded-xl border hover:bg-accent/50 transition-colors"
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${feature.color}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <p className="font-medium text-xs mb-0.5">{feature.title}</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {feature.description}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between p-4 border-t">
-          {isFirst ? (
-            <Button variant="ghost" size="sm" onClick={handleSkip}>
-              Skip Tour
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Back
-            </Button>
-          )}
-
-          {/* Dots */}
-          <div className="flex gap-1.5">
-            {steps.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setStep(i)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  i === step ? 'bg-green-600 w-4' : 'bg-muted-foreground/30'
-                }`}
-              />
-            ))}
-          </div>
-
-          {isLast ? (
-            <Button variant="green" size="sm" onClick={handleComplete}>
-              Let's Go!
-            </Button>
-          ) : (
-            <Button variant="green" size="sm" onClick={() => setStep(step + 1)}>
-              Next
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          )}
-        </div>
+            <div className="p-4 border-t shrink-0">
+              <Button variant="green" className="w-full" onClick={handleComplete}>
+                Let&apos;s Play!
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
-/**
- * Reset the onboarding tour so it shows again.
- * Can be called from profile/settings.
- */
 export function resetOnboarding() {
   localStorage.removeItem(STORAGE_KEY)
 }
