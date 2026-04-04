@@ -11,6 +11,7 @@ import { DemoBanner } from '@/components/demo/DemoBanner'
 import { UsersProvider } from '@/contexts/UsersContext'
 import { PushPrompt } from '@/components/notifications/PushPrompt'
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
+import { RoleOnboarding } from '@/components/onboarding/RoleOnboarding'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardLayout({
@@ -75,6 +76,8 @@ export default function DashboardLayout({
         <PushPrompt />
         {/* First-time onboarding */}
         <OnboardingTour />
+        {/* Role onboarding (after election win) */}
+        <RoleOnboarding />
       </div>
     </UsersProvider>
   )

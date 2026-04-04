@@ -8,6 +8,7 @@ import {
   getPlayerRoundsForMonth,
   addAttestation,
   createNotification,
+  flagRound,
 } from '@/lib/firebase/firestore'
 import { sendPush } from '@/lib/firebase/push'
 import { getCurrentMonthKey, formatMonthKey } from '@/lib/utils/dates'
@@ -254,7 +255,20 @@ export default function AttestPage() {
               <div className="space-y-3">
                 {playerRounds.map((round) => (
                   <div key={round.id} className="relative">
-                    <RoundCard round={round} />
+                    <RoundCard
+                      round={round}
+                      onFlag={
+                        (profile?.isAdmin || profile?.roles?.includes('master_at_arms'))
+                          ? async (roundId) => {
+                              const reason = prompt('Reason for flagging (optional):') ?? ''
+                              if (user) {
+                                await flagRound(roundId, user.uid, reason)
+                                toast.success('Round flagged for review.')
+                              }
+                            }
+                          : undefined
+                      }
+                    />
 
                     {/* Skill stats — prominent for attestor verification */}
                     {(round.sandSaves > 0 || round.par3Pars > 0) && (

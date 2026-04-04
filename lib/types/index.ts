@@ -159,6 +159,17 @@ export interface PollComment {
   createdAt: Timestamp
 }
 
+// ─── Announcements ──────────────────────────────────────────────────────────
+export interface Announcement {
+  id: string
+  title: string
+  body: string
+  pinned: boolean
+  postedBy: string
+  postedByName: string
+  createdAt: Timestamp
+}
+
 // ─── Elections ──────────────────────────────────────────────────────────────
 export interface Election extends Omit<Poll, 'type' | 'status'> {
   type: 'election'

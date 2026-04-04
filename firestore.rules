@@ -143,6 +143,13 @@ service cloud.firestore {
       }
     }
 
+    // ─── Announcements ────────────────────────────────────────────────────
+    match /announcements/{announcementId} {
+      allow read: if authed();
+      // Commissioner, Secretary, or Admin can manage announcements
+      allow create, update, delete: if authed();
+    }
+
     // ─── Current Officers ─────────────────────────────────────────────────
     match /currentOfficers/{officerId} {
       allow read: if authed();

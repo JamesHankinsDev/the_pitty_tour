@@ -46,6 +46,7 @@ import type {
   Candidate,
   CurrentOfficer,
   FlaggedRound,
+  Announcement,
   UserProfile,
   Season,
   Registration,
@@ -74,6 +75,7 @@ export const COLLECTIONS = {
   POLLS: 'polls',
   CURRENT_OFFICERS: 'currentOfficers',
   FLAGGED_ROUNDS: 'flaggedRounds',
+  ANNOUNCEMENTS: 'announcements',
   PAYOUTS: 'payouts',
   MONTH_CLOSES: 'monthCloses',
 } as const
@@ -1264,4 +1266,45 @@ export function subscribeToFlaggedRounds(
 export async function dismissFlag(flagId: string): Promise<void> {
   if (guardDemoWrite('Dismissing flags')) return
   await deleteDoc(doc(db, COLLECTIONS.FLAGGED_ROUNDS, flagId))
+}
+
+// ─── Announcements ──────────────────────────────────────────────────────────
+
+export async function postAnnouncement(
+  data: Omit<Announcement, 'id' | 'createdAt'>
+): Promise<void> {
+  if (guardDemoWrite('Posting announcements')) return
+  await addDoc(collection(db, COLLECTIONS.ANNOUNCEMENTS), {
+    ...data,
+    createdAt: serverTimestamp(),
+  })
+}
+
+export async function updateAnnouncement(
+  id: string,
+  data: Partial<Announcement>
+): Promise<void> {
+  if (guardDemoWrite('Updating announcements')) return
+  await updateDoc(doc(db, COLLECTIONS.ANNOUNCEMENTS, id), data as Record<string, unknown>)
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  if (guardDemoWrite('Deleting announcements')) return
+  await deleteDoc(doc(db, COLLECTIONS.ANNOUNCEMENTS, id))
+}
+
+export function subscribeToAnnouncements(
+  callback: (announcements: Announcement[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.ANNOUNCEMENTS),
+    orderBy('createdAt', 'desc'),
+    limit(20)
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Announcement)))
+  }, (err) => {
+    console.warn('Announcements error:', err.message)
+    callback([])
+  })
 }

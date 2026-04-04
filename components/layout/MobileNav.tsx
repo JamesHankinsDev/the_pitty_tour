@@ -27,6 +27,7 @@ import {
   Award,
   Medal,
   Vote,
+  Megaphone,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -70,6 +71,7 @@ const menuSections = [
   {
     label: 'Community',
     items: [
+      { href: '/dashboard/announcements', label: 'Announcements', icon: Megaphone },
       { href: '/dashboard/officers', label: 'Officers', icon: Shield },
       { href: '/dashboard/polls', label: 'Polls', icon: Vote },
       { href: '/dashboard/elections', label: 'Elections', icon: Vote },

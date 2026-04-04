@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
 import { usePlayerRounds } from '@/lib/hooks/useRounds'
-import { subscribeToLFGPlayers, createNotification } from '@/lib/firebase/firestore'
+import { subscribeToLFGPlayers, createNotification, subscribeToAnnouncements } from '@/lib/firebase/firestore'
+import type { Announcement } from '@/lib/types'
 import type { UserProfile } from '@/lib/types'
 import { getCurrentMonthKey, daysRemainingInMonth, formatMonthKey } from '@/lib/utils/dates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ import {
   TrendingUp,
   Users,
   MessageSquare,
+  Megaphone,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -73,10 +75,17 @@ export default function DashboardPage() {
   const daysLeft = daysRemainingInMonth()
   const { rounds, loading: roundsLoading } = usePlayerRounds(profile?.uid)
   const [lfgPlayers, setLfgPlayers] = useState<UserProfile[]>([])
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
 
   useEffect(() => {
     if (isDemo) return
     const unsub = subscribeToLFGPlayers(setLfgPlayers)
+    return unsub
+  }, [isDemo])
+
+  useEffect(() => {
+    if (isDemo) return
+    const unsub = subscribeToAnnouncements(setAnnouncements)
     return unsub
   }, [isDemo])
 
@@ -116,6 +125,19 @@ export default function DashboardPage() {
           {formatMonthKey(currentMonth)} · {daysLeft} days left to submit
         </p>
       </div>
+
+      {/* Pinned Announcements */}
+      {announcements.filter((a) => a.pinned).slice(0, 2).map((a) => (
+        <Card key={a.id} className="border-yellow-300 bg-yellow-50">
+          <CardContent className="p-3 flex gap-3">
+            <Megaphone className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-yellow-800">{a.title}</p>
+              <p className="text-xs text-yellow-700 mt-0.5 line-clamp-2">{a.body}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
 
       {/* Current Month Status Banner */}
       <div
