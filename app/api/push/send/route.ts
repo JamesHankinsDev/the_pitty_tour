@@ -1,3 +1,6 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminMessaging } from '@/lib/firebase/admin'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'

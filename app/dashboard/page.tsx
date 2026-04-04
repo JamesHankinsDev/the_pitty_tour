@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
 import { usePlayerRounds } from '@/lib/hooks/useRounds'
-import { subscribeToLFGPlayers, createNotification, subscribeToAnnouncements } from '@/lib/firebase/firestore'
+import { subscribeToLFGPlayers, subscribeToAnnouncements } from '@/lib/firebase/firestore'
 import type { Announcement } from '@/lib/types'
 import type { UserProfile } from '@/lib/types'
 import { getCurrentMonthKey, daysRemainingInMonth, formatMonthKey } from '@/lib/utils/dates'
@@ -350,27 +350,6 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* TEMPORARY: Seed sample notifications — remove after testing */}
-      {profile?.isAdmin && user && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs text-muted-foreground"
-          onClick={async () => {
-            const samples = [
-              { type: 'round_submitted' as const, title: 'New Round Submitted', body: 'Jake Torres shot 82 at Winged Foot West', link: '/dashboard/leaderboard', actorName: 'Jake Torres' },
-              { type: 'round_attested' as const, title: 'Round Attested!', body: "Mike Sullivan attested your round at Bethpage Black. It's now valid!", link: '/dashboard/my-rounds', actorName: 'Mike Sullivan' },
-              { type: 'lfg' as const, title: 'Looking for Partner', body: 'Chris Park is looking for a partner: "Saturday AM at Bethpage"', link: '/dashboard/messages', actorName: 'Chris Park' },
-            ]
-            for (const s of samples) {
-              await createNotification({ recipientUid: user.uid, ...s, actorPhotoURL: '' })
-            }
-            alert('3 sample notifications created! Check the bell icon.')
-          }}
-        >
-          Seed Sample Notifications (Admin Only)
-        </Button>
-      )}
     </div>
   )
 }
