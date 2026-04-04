@@ -28,6 +28,7 @@ import {
   Medal,
   Vote,
   Megaphone,
+  ChevronDown,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -39,7 +40,7 @@ const bottomTabs = [
   { href: '/dashboard/submit-round', label: 'Submit', icon: Flag },
   { href: '/dashboard/attest', label: 'Attest', icon: ScanLine },
   { href: '/dashboard/leaderboard', label: 'Standings', icon: BarChart3 },
-  { href: '/dashboard/my-qr', label: 'QR Code', icon: QrCode },
+  { href: '/dashboard/profile', label: 'Profile', icon: User },
 ]
 
 const menuSections = [
@@ -62,7 +63,6 @@ const menuSections = [
       { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: BarChart3 },
       { href: '/dashboard/prize-pool', label: 'Prize Pool', icon: DollarSign },
       { href: '/dashboard/players', label: 'Players', icon: Users },
-      { href: '/dashboard/messages', label: 'Tour Board', icon: MessageSquare },
       { href: '/dashboard/courses', label: 'Courses', icon: MapPin },
       { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
       { href: '/dashboard/highlights', label: 'Highlights', icon: Award },
@@ -71,18 +71,15 @@ const menuSections = [
   {
     label: 'Community',
     items: [
-      { href: '/dashboard/announcements', label: 'Announcements', icon: Megaphone },
-      { href: '/dashboard/officers', label: 'Officers', icon: Shield },
-      { href: '/dashboard/polls', label: 'Polls', icon: Vote },
-      { href: '/dashboard/elections', label: 'Elections', icon: Vote },
+      { href: '/dashboard/tour-info', label: 'Tour Info', icon: Megaphone },
+      { href: '/dashboard/messages', label: 'Tour Board', icon: MessageSquare },
+      { href: '/dashboard/voting', label: 'Polls & Elections', icon: Vote },
     ],
   },
   {
     label: 'Me',
     items: [
-      { href: '/dashboard/my-qr', label: 'My QR Code', icon: QrCode },
-      { href: '/dashboard/marker-passport', label: 'Marker Passport', icon: Stamp },
-      { href: '/dashboard/achievements', label: 'Achievements', icon: Medal },
+      { href: '/dashboard/my-progress', label: 'My Progress', icon: Medal },
       { href: '/dashboard/profile', label: 'Profile', icon: User },
     ],
   },
@@ -93,6 +90,15 @@ export function MobileNav() {
   const { profile, logOut, isDemo } = useAuth()
   const { rank, totalPoints, totalEarnings } = usePlayerStats()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+
+  const toggleSection = (label: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) { next.delete(label) } else { next.add(label) }
+      return next
+    })
+  }
 
   return (
     <>
@@ -139,17 +145,25 @@ export function MobileNav() {
           </div>
 
           <div className="flex-1 overflow-y-auto py-4 px-4">
-            {menuSections.map((section, si) => (
+            {menuSections.map((section, si) => {
+              const isCollapsed = section.label ? collapsedSections.has(section.label) : false
+              const hasActiveItem = section.items.some((item) => pathname === item.href)
+
+              return (
               <div key={si}>
                 {section.label && (
                   <>
-                    <div className="my-3 border-t" />
-                    <p className="px-4 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {section.label}
-                    </p>
+                    <div className="my-2 border-t" />
+                    <button
+                      onClick={() => toggleSection(section.label!)}
+                      className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                    >
+                      <span>{section.label}</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+                    </button>
                   </>
                 )}
-                {section.items.map((item) => {
+                {!isCollapsed && section.items.map((item) => {
                   const Icon = item.icon
                   const isActive = pathname === item.href
                   return (
@@ -170,7 +184,8 @@ export function MobileNav() {
                   )
                 })}
               </div>
-            ))}
+              )
+            })}
 
             {profile?.isAdmin && (
               <div className="pt-3 mt-3 border-t">

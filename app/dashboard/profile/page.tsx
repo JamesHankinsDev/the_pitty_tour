@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateUserProfile, recordHandicapSnapshot } from '@/lib/firebase/firestore'
 import { HandicapChart } from '@/components/charts/HandicapChart'
+import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay'
 import { resetOnboarding } from '@/components/onboarding/OnboardingTour'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -328,25 +329,21 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* QR Code shortcut */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <QrCode className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="font-medium text-sm">Your QR Code</p>
-                <p className="text-xs text-muted-foreground">
-                  Share for attestation
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/my-qr">View QR</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* QR Code */}
+      {profile && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <QrCode className="w-4 h-4 text-green-600" />
+              Your QR Code
+            </CardTitle>
+            <CardDescription>Share with playing partners for attestation</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <QRCodeDisplay value={profile.uid} displayName={profile.displayName} size={200} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Handicap Trend */}
       {user && (
