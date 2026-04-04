@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateUserProfile, recordHandicapSnapshot } from '@/lib/firebase/firestore'
 import { HandicapChart } from '@/components/charts/HandicapChart'
+import { resetOnboarding } from '@/components/onboarding/OnboardingTour'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -354,6 +355,19 @@ export default function ProfilePage() {
           currentIndex={profile?.handicapIndex ?? 0}
         />
       )}
+
+      {/* Replay onboarding */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-xs text-muted-foreground"
+        onClick={() => {
+          resetOnboarding()
+          window.location.reload()
+        }}
+      >
+        Replay Welcome Tour
+      </Button>
     </div>
   )
 }

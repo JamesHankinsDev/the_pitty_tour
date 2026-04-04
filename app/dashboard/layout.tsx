@@ -10,6 +10,7 @@ import { InviteGate } from '@/components/auth/InviteGate'
 import { DemoBanner } from '@/components/demo/DemoBanner'
 import { UsersProvider } from '@/contexts/UsersContext'
 import { PushPrompt } from '@/components/notifications/PushPrompt'
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardLayout({
@@ -72,6 +73,8 @@ export default function DashboardLayout({
         </div>
         {/* Push notification prompt */}
         <PushPrompt />
+        {/* First-time onboarding */}
+        <OnboardingTour />
       </div>
     </UsersProvider>
   )
