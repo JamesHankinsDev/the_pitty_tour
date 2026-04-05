@@ -143,6 +143,54 @@ service cloud.firestore {
       }
     }
 
+    // ─── Cached Courses (GolfCourseAPI imports) ──────────────────────────
+    match /cachedCourses/{courseId} {
+      allow read: if authed();
+      // Any authed user can create/update (cache-fill on search)
+      allow create, update: if authed();
+      allow delete: if admin();
+    }
+
+    // ─── Exhibition Sessions ──────────────────────────────────────────────
+    match /exhibitionSessions/{sessionId} {
+      // Lobby sessions are readable by anyone authed (for join flow)
+      // Active/completed sessions readable by anyone authed (players + spectators)
+      allow read: if authed();
+
+      // Any authed user can create (they become host)
+      allow create: if authed()
+        && request.resource.data.hostId == request.auth.uid
+        && request.resource.data.status == 'lobby';
+
+      // Only host can update the session document
+      allow update: if authed() && resource.data.hostId == request.auth.uid;
+
+      // Only host can delete (pre-completion)
+      allow delete: if authed() && resource.data.hostId == request.auth.uid;
+
+      // Players subcollection — doc ID = userId
+      match /players/{playerUid} {
+        allow read: if authed();
+        // A user can only write their own player doc
+        allow create, update: if isMe(playerUid);
+        // Host can update any player (for team assignments, kicks, etc.)
+        allow update: if authed()
+          && get(/databases/$(database)/documents/exhibitionSessions/$(sessionId)).data.hostId == request.auth.uid;
+        allow delete: if isMe(playerUid)
+          || (authed() && get(/databases/$(database)/documents/exhibitionSessions/$(sessionId)).data.hostId == request.auth.uid);
+      }
+
+      // Card log subcollection — any player in the session can write
+      match /cardLog/{logId} {
+        allow read: if authed();
+        allow create: if authed();
+        // Host can override entries
+        allow update: if authed()
+          && get(/databases/$(database)/documents/exhibitionSessions/$(sessionId)).data.hostId == request.auth.uid;
+        allow delete: if false;
+      }
+    }
+
     // ─── Scheduled Rounds ──────────────────────────────────────────────────
     match /scheduledRounds/{roundId} {
       allow read: if authed();
@@ -217,6 +265,38 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid;
       allow delete: if authed();
       allow update: if false;
+    }
+
+    // ─── Feedback ────────────────────────────────────────────────────────
+    match /feedback/{feedbackId} {
+      // Users can read their own; admin can read all
+      allow read: if authed()
+        && (resource.data.uid == request.auth.uid || admin());
+      // List requires a where('uid', '==', me) filter unless admin
+      allow list: if authed();
+
+      // Create: must be self-authored
+      allow create: if authed()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'new'
+        && request.resource.data.adminResponse == ''
+        && request.resource.data.respondedAt == null;
+
+      // Update: admin can update anything; owner can edit while still 'new'
+      allow update: if admin()
+        || (authed()
+          && resource.data.uid == request.auth.uid
+          && resource.data.status == 'new'
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.status == 'new'
+          && request.resource.data.adminResponse == ''
+          && request.resource.data.respondedAt == null);
+
+      // Delete: admin or owner (while still 'new')
+      allow delete: if admin()
+        || (authed()
+          && resource.data.uid == request.auth.uid
+          && resource.data.status == 'new');
     }
 
     // ─── Invites ─────────────────────────────────────────────────────────

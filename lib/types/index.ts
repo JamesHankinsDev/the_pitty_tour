@@ -194,6 +194,166 @@ export interface Announcement {
   createdAt: Timestamp
 }
 
+// ─── Exhibition Course Cache ────────────────────────────────────────────────
+// Separate from the user-curated Course directory — full hole-by-hole data
+// cached from GolfCourseAPI.com for exhibition scoring.
+
+export interface CachedCourseHole {
+  number: number
+  par: number
+  strokeIndex: number
+  yardages: { [teeName: string]: number }
+}
+
+export interface CachedCourseTee {
+  name: string
+  gender: 'male' | 'female'
+  slope: number
+  rating: number
+  totalYardage?: number
+}
+
+export interface CachedCourse {
+  id: string                 // Firestore doc ID
+  golfcourseapi_id: number
+  courseName: string
+  clubName: string
+  city: string
+  state: string
+  country: string
+  par: number                // total par (front 9 + back 9)
+  holes: CachedCourseHole[]
+  tees: CachedCourseTee[]
+  importedAt: Timestamp
+  lastRefreshedAt: Timestamp
+}
+
+// ─── Exhibition Rounds ──────────────────────────────────────────────────────
+// Standalone game mode — completely isolated from tour/season data.
+
+export type HoleResult =
+  | 'ace'
+  | 'eagle'
+  | 'birdie'
+  | 'par'
+  | 'bogey'
+  | 'double_bogey'
+  | 'triple_plus'
+
+export type CardType = 'power_up' | 'penalty' | 'self_penalty' | 'opponent_boost'
+
+export type CardTrigger =
+  | 'birdie'
+  | 'birdie_back_to_back'
+  | 'eagle'
+  | 'eagle_or_ace'
+  | 'bogey'
+  | 'double_bogey'
+  | 'triple_bogey_or_worse'
+
+export interface CardDefinition {
+  key: string
+  name: string
+  description: string
+  type: CardType
+  trigger: CardTrigger
+  timing: string
+  isNsfw: boolean
+  requiresGroupVerify: boolean
+  requiresPhysical: boolean
+}
+
+export interface CardItem {
+  key: string
+  name: string
+  type: CardType
+  holeEarned: number
+  mustPlayByHole: number
+}
+
+export type ExhibitionFormat =
+  | 'stroke_play'
+  | 'skins'
+  | 'match_play'
+  | 'stableford'
+  | 'shamble'
+  | 'scramble'
+  | 'vegas'
+
+export type ExhibitionStatus = 'lobby' | 'active' | 'completed'
+
+export interface ExhibitionTeam {
+  id: string
+  name: string
+  color: string
+  memberIds: string[]
+}
+
+export interface ExhibitionSession {
+  id: string
+  status: ExhibitionStatus
+  hostId: string
+  courseId: string
+  courseName: string
+  holes: 9 | 18
+  startingHole: number
+  format: ExhibitionFormat
+  scoringMode: 'gross' | 'net'
+  teamMode: boolean
+  teams: ExhibitionTeam[] | null
+  useCards: boolean
+  activeCards: string[]
+  nsfwCards: boolean
+  createdAt: Timestamp
+  startedAt: Timestamp | null
+  completedAt: Timestamp | null
+  inviteCode: string
+  // Tee selection locked at session start
+  teeName: string
+  slope: number
+  courseRating: number
+  par: number
+}
+
+export interface ExhibitionHoleScore {
+  gross: number | null
+  net: number | null
+  par: number
+  strokeIndex: number
+  handicapStrokes: number
+  stablefordPoints: number | null
+  cardUsed: CardItem | null
+  cardReceived: CardItem | null
+  honestAbeActive: boolean
+  submittedAt: Timestamp | null
+}
+
+export interface ExhibitionPlayer {
+  userId: string
+  displayName: string
+  photoURL: string | null
+  handicapIndex: number
+  courseHandicap: number
+  teamId: string | null
+  status: 'invited' | 'joined' | 'active'
+  joinedAt: Timestamp
+  drinksConsumed: number
+  cardInventory: CardItem[]
+  pendingCards: CardItem[]
+  scores: { [holeNumber: string]: ExhibitionHoleScore }
+}
+
+export interface ExhibitionCardLogEntry {
+  id: string
+  hole: number
+  fromUserId: string
+  toUserId: string
+  card: CardItem
+  cardType: CardType
+  resolvedAt: Timestamp | null
+  overriddenByHost: boolean
+}
+
 // ─── Elections ──────────────────────────────────────────────────────────────
 export interface Election extends Omit<Poll, 'type' | 'status'> {
   type: 'election'
@@ -449,3 +609,22 @@ export const POINTS_DEFAULT = 25 // 11th place and beyond
 export const POINTS_PARTICIPATION_BONUS = 25   // for showing up
 export const POINTS_AFFILIATE_PAIR_BONUS = 50  // for playing with affiliate pair
 export const POINTS_SKILL_POOL = 100           // shared pool for sand saves + par-3 pars
+
+// ─── Feedback ────────────────────────────────────────────────────────────────
+export type FeedbackType = 'bug' | 'feature' | 'question'
+export type FeedbackStatus = 'new' | 'backlog' | 'in_progress' | 'completed' | 'rejected'
+
+export interface Feedback {
+  id: string
+  uid: string
+  displayName: string
+  photoURL: string
+  type: FeedbackType
+  title: string
+  description: string
+  status: FeedbackStatus
+  adminResponse: string
+  respondedAt: Timestamp | null
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}

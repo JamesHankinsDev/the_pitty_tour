@@ -48,6 +48,11 @@ import type {
   FlaggedRound,
   Announcement,
   ScheduledRound,
+  ExhibitionSession,
+  ExhibitionPlayer,
+  ExhibitionCardLogEntry,
+  CachedCourse,
+  Feedback,
   UserProfile,
   Season,
   Registration,
@@ -78,8 +83,11 @@ export const COLLECTIONS = {
   FLAGGED_ROUNDS: 'flaggedRounds',
   ANNOUNCEMENTS: 'announcements',
   SCHEDULED_ROUNDS: 'scheduledRounds',
+  EXHIBITION_SESSIONS: 'exhibitionSessions',
+  CACHED_COURSES: 'cachedCourses',
   PAYOUTS: 'payouts',
   MONTH_CLOSES: 'monthCloses',
+  FEEDBACK: 'feedback',
 } as const
 
 // ─── User Operations ─────────────────────────────────────────────────────────
@@ -1368,4 +1376,318 @@ export async function leaveScheduledRound(
 export async function deleteScheduledRound(id: string): Promise<void> {
   if (guardDemoWrite('Deleting scheduled rounds')) return
   await deleteDoc(doc(db, COLLECTIONS.SCHEDULED_ROUNDS, id))
+}
+
+// ─── Exhibition Sessions ────────────────────────────────────────────────────
+
+export async function createExhibitionSession(
+  data: Omit<ExhibitionSession, 'id' | 'createdAt' | 'startedAt' | 'completedAt'>
+): Promise<string> {
+  if (guardDemoWrite('Creating exhibition')) return ''
+  const ref = await addDoc(collection(db, COLLECTIONS.EXHIBITION_SESSIONS), {
+    ...data,
+    createdAt: serverTimestamp(),
+    startedAt: null,
+    completedAt: null,
+  })
+  return ref.id
+}
+
+export async function getExhibitionSession(
+  sessionId: string
+): Promise<ExhibitionSession | null> {
+  const snap = await getDoc(doc(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId))
+  return snap.exists() ? ({ id: snap.id, ...snap.data() } as ExhibitionSession) : null
+}
+
+export async function findSessionByInviteCode(
+  inviteCode: string
+): Promise<ExhibitionSession | null> {
+  const q = query(
+    collection(db, COLLECTIONS.EXHIBITION_SESSIONS),
+    where('inviteCode', '==', inviteCode.toUpperCase()),
+    limit(1)
+  )
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+  const d = snap.docs[0]
+  return { id: d.id, ...d.data() } as ExhibitionSession
+}
+
+export function subscribeToExhibitionSession(
+  sessionId: string,
+  callback: (session: ExhibitionSession | null) => void
+) {
+  return onSnapshot(
+    doc(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId),
+    (snap) => {
+      callback(snap.exists() ? ({ id: snap.id, ...snap.data() } as ExhibitionSession) : null)
+    },
+    (err) => {
+      console.warn('Exhibition session subscription error:', err.message)
+      callback(null)
+    }
+  )
+}
+
+export async function updateExhibitionSession(
+  sessionId: string,
+  data: Partial<ExhibitionSession>
+): Promise<void> {
+  if (guardDemoWrite('Updating exhibition')) return
+  await updateDoc(
+    doc(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId),
+    data as Record<string, unknown>
+  )
+}
+
+export async function deleteExhibitionSession(sessionId: string): Promise<void> {
+  if (guardDemoWrite('Deleting exhibition')) return
+  await deleteDoc(doc(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId))
+}
+
+/**
+ * List sessions a user is part of (host or player).
+ * Client filters: returns all sessions where user is host OR has a player doc.
+ */
+export async function getUserExhibitionSessions(
+  uid: string
+): Promise<ExhibitionSession[]> {
+  // Sessions I host
+  const hostedQ = query(
+    collection(db, COLLECTIONS.EXHIBITION_SESSIONS),
+    where('hostId', '==', uid)
+  )
+  const hostedSnap = await getDocs(hostedQ)
+  const hosted = hostedSnap.docs.map((d) => ({ id: d.id, ...d.data() } as ExhibitionSession))
+  // Simpler: just return hosted for now; joined sessions are accessed via invite/share
+  return hosted
+}
+
+// ─── Exhibition Players (subcollection) ────────────────────────────────────
+
+export async function joinExhibitionSession(
+  sessionId: string,
+  player: Omit<ExhibitionPlayer, 'joinedAt'>
+): Promise<void> {
+  if (guardDemoWrite('Joining exhibition')) return
+  await setDoc(
+    doc(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId, 'players', player.userId),
+    { ...player, joinedAt: serverTimestamp() }
+  )
+}
+
+export async function updateExhibitionPlayer(
+  sessionId: string,
+  userId: string,
+  data: Partial<ExhibitionPlayer>
+): Promise<void> {
+  if (guardDemoWrite('Updating exhibition player')) return
+  await updateDoc(
+    doc(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId, 'players', userId),
+    data as Record<string, unknown>
+  )
+}
+
+export async function removeExhibitionPlayer(
+  sessionId: string,
+  userId: string
+): Promise<void> {
+  if (guardDemoWrite('Removing exhibition player')) return
+  await deleteDoc(
+    doc(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId, 'players', userId)
+  )
+}
+
+export function subscribeToExhibitionPlayers(
+  sessionId: string,
+  callback: (players: ExhibitionPlayer[]) => void
+) {
+  return onSnapshot(
+    collection(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId, 'players'),
+    (snap) => {
+      callback(snap.docs.map((d) => d.data() as ExhibitionPlayer))
+    },
+    (err) => {
+      console.warn('Exhibition players error:', err.message)
+      callback([])
+    }
+  )
+}
+
+// ─── Exhibition Card Log (subcollection) ────────────────────────────────────
+
+export async function logCardEvent(
+  sessionId: string,
+  entry: Omit<ExhibitionCardLogEntry, 'id'>
+): Promise<void> {
+  if (guardDemoWrite('Logging card')) return
+  await addDoc(
+    collection(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId, 'cardLog'),
+    entry
+  )
+}
+
+export function subscribeToCardLog(
+  sessionId: string,
+  callback: (entries: ExhibitionCardLogEntry[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId, 'cardLog'),
+    orderBy('hole', 'asc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ExhibitionCardLogEntry)))
+  }, (err) => {
+    console.warn('Card log error:', err.message)
+    callback([])
+  })
+}
+
+export async function overrideCardEvent(
+  sessionId: string,
+  entryId: string
+): Promise<void> {
+  if (guardDemoWrite('Overriding card')) return
+  await updateDoc(
+    doc(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId, 'cardLog', entryId),
+    { overriddenByHost: true, resolvedAt: serverTimestamp() }
+  )
+}
+
+// ─── Cached Courses (GolfCourseAPI hole-by-hole data) ──────────────────────
+
+export async function findCachedCourseByApiId(
+  apiId: number
+): Promise<CachedCourse | null> {
+  const q = query(
+    collection(db, COLLECTIONS.CACHED_COURSES),
+    where('golfcourseapi_id', '==', apiId),
+    limit(1)
+  )
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+  const d = snap.docs[0]
+  return { id: d.id, ...d.data() } as CachedCourse
+}
+
+export async function getCachedCourse(courseId: string): Promise<CachedCourse | null> {
+  const snap = await getDoc(doc(db, COLLECTIONS.CACHED_COURSES, courseId))
+  return snap.exists() ? ({ id: snap.id, ...snap.data() } as CachedCourse) : null
+}
+
+export async function importCachedCourse(
+  data: Omit<CachedCourse, 'id' | 'importedAt' | 'lastRefreshedAt'>
+): Promise<string> {
+  if (guardDemoWrite('Importing course')) return ''
+  const ref = await addDoc(collection(db, COLLECTIONS.CACHED_COURSES), {
+    ...data,
+    importedAt: serverTimestamp(),
+    lastRefreshedAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateCachedCourse(
+  courseId: string,
+  data: Partial<CachedCourse>
+): Promise<void> {
+  if (guardDemoWrite('Updating cached course')) return
+  await updateDoc(
+    doc(db, COLLECTIONS.CACHED_COURSES, courseId),
+    { ...data, lastRefreshedAt: serverTimestamp() } as Record<string, unknown>
+  )
+}
+
+export async function searchCachedCourses(queryStr: string): Promise<CachedCourse[]> {
+  // Firestore doesn't support case-insensitive contains natively.
+  // We fetch all courses and filter client-side. For a small cache (<500) this is fine.
+  const snap = await getDocs(collection(db, COLLECTIONS.CACHED_COURSES))
+  const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as CachedCourse))
+  const q = queryStr.toLowerCase().trim()
+  return all
+    .filter((c) =>
+      c.courseName.toLowerCase().includes(q) ||
+      c.clubName.toLowerCase().includes(q)
+    )
+    .slice(0, 10)
+}
+
+// ─── Feedback ───────────────────────────────────────────────────────────────
+
+export async function createFeedback(
+  data: Omit<Feedback, 'id' | 'createdAt' | 'updatedAt' | 'respondedAt' | 'adminResponse' | 'status'>
+): Promise<string> {
+  if (guardDemoWrite('Submitting feedback')) return ''
+  const ref = await addDoc(collection(db, COLLECTIONS.FEEDBACK), {
+    ...data,
+    status: 'new',
+    adminResponse: '',
+    respondedAt: null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateFeedback(
+  id: string,
+  data: Partial<Feedback>
+): Promise<void> {
+  if (guardDemoWrite('Updating feedback')) return
+  await updateDoc(doc(db, COLLECTIONS.FEEDBACK, id), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  } as Record<string, unknown>)
+}
+
+export async function deleteFeedback(id: string): Promise<void> {
+  if (guardDemoWrite('Deleting feedback')) return
+  await deleteDoc(doc(db, COLLECTIONS.FEEDBACK, id))
+}
+
+export async function respondToFeedback(
+  id: string,
+  adminResponse: string,
+  status: Feedback['status']
+): Promise<void> {
+  if (guardDemoWrite('Responding to feedback')) return
+  await updateDoc(doc(db, COLLECTIONS.FEEDBACK, id), {
+    adminResponse,
+    status,
+    respondedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export function subscribeToAllFeedback(
+  callback: (items: Feedback[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.FEEDBACK),
+    orderBy('createdAt', 'desc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Feedback)))
+  }, (err) => {
+    console.warn('Feedback error:', err.message)
+    callback([])
+  })
+}
+
+export function subscribeToUserFeedback(
+  uid: string,
+  callback: (items: Feedback[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.FEEDBACK),
+    where('uid', '==', uid),
+    orderBy('createdAt', 'desc')
+  )
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Feedback)))
+  }, (err) => {
+    console.warn('User feedback error:', err.message)
+    callback([])
+  })
 }

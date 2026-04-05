@@ -26,6 +26,8 @@ import {
   Megaphone,
   Target,
   Cloud,
+  Sparkles,
+  MessageSquarePlus,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,7 @@ const navSections = [
       { href: "/dashboard/submit-round", label: "Submit Round", icon: Flag },
       { href: "/dashboard/attest", label: "Attest", icon: ScanLine },
       { href: "/dashboard/my-rounds", label: "My Rounds", icon: ClipboardList },
+      { href: "/exhibition", label: "Exhibition", icon: Sparkles },
     ],
   },
   {
@@ -70,6 +73,7 @@ const navSections = [
     items: [
       { href: "/dashboard/my-progress", label: "My Progress", icon: Medal },
       { href: "/dashboard/profile", label: "Profile", icon: User },
+      { href: "/dashboard/feedback", label: "Feedback", icon: MessageSquarePlus },
     ],
   },
 ];
@@ -114,7 +118,10 @@ export function DashboardNav() {
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive =
+                  item.href === "/exhibition"
+                    ? pathname.startsWith("/exhibition")
+                    : pathname === item.href;
                 return (
                   <Link
                     key={item.href}

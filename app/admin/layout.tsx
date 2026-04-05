@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Mail,
   Vote,
+  Map,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -28,6 +29,7 @@ const adminNav = [
   { href: '/admin/polls', label: 'Polls', icon: Vote },
   { href: '/admin/elections', label: 'Elections', icon: Vote },
   { href: '/admin/invites', label: 'Invites', icon: Mail },
+  { href: '/admin/roadmap', label: 'Roadmap', icon: Map },
 ]
 
 export default function AdminLayout({

@@ -91,7 +91,6 @@ export async function POST(req: NextRequest) {
     }
 
     const ghinId = String(ghinNumber).trim()
-    console.log('[GHIN] Looking up golfer:', ghinId)
 
     const token = await getGhinToken()
 
@@ -126,7 +125,6 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json()
-    console.log('[GHIN] Raw response:', JSON.stringify(data, null, 2))
 
     const golfer = data?.golfers?.[0]
     if (!golfer) {
@@ -140,8 +138,6 @@ export async function POST(req: NextRequest) {
     const rawStr = String(rawHi ?? '').trim()
     const isNH = rawStr === 'NH' || rawStr === '' || rawStr === 'null'
     const handicapIndex = isNH ? null : parseFloat(rawStr)
-
-    console.log('[GHIN] Found golfer:', golfer.first_name, golfer.last_name, '- HI:', rawStr)
 
     return NextResponse.json({
       handicapIndex: handicapIndex !== null && !isNaN(handicapIndex) ? handicapIndex : null,
