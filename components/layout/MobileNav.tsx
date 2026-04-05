@@ -29,6 +29,7 @@ import {
   Vote,
   Megaphone,
   ChevronDown,
+  Cloud,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -65,6 +66,7 @@ const menuSections = [
       { href: '/dashboard/players', label: 'Players', icon: Users },
       { href: '/dashboard/courses', label: 'Courses', icon: MapPin },
       { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
+      { href: '/dashboard/weather', label: 'Weather', icon: Cloud },
       { href: '/dashboard/highlights', label: 'Highlights', icon: Award },
     ],
   },

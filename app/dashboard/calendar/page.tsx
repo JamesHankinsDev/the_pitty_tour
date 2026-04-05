@@ -58,6 +58,7 @@ import {
   isPast,
 } from 'date-fns'
 import type { Round, MonthClose, ScheduledRound } from '@/lib/types'
+import { ForecastBadge } from '@/components/calendar/ForecastBadge'
 
 export const dynamic = 'force-dynamic'
 
@@ -331,6 +332,9 @@ export default function CalendarPage() {
                         {sr.note && (
                           <p className="text-xs text-muted-foreground mt-0.5 italic">{sr.note}</p>
                         )}
+                        <div className="mt-1.5">
+                          <ForecastBadge courseName={sr.courseName} date={sr.date} />
+                        </div>
                         {/* Player avatars */}
                         <div className="flex items-center gap-1 mt-2">
                           {sr.players.map((pid) => {
@@ -479,12 +483,15 @@ export default function CalendarPage() {
                   const spotsLeft = sr.spots - sr.players.length
                   return (
                     <div key={sr.id} className="flex items-center justify-between p-2.5 bg-blue-50 rounded-lg border border-blue-100">
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{sr.courseName} at {sr.teeTime}</p>
                         <p className="text-xs text-muted-foreground">
                           {sr.hostName} &middot; {sr.players.length}/{sr.spots} players
-                          {sr.note && ` &middot; ${sr.note}`}
+                          {sr.note && ` · ${sr.note}`}
                         </p>
+                        <div className="mt-1">
+                          <ForecastBadge courseName={sr.courseName} date={sr.date} />
+                        </div>
                       </div>
                       {!isMember && spotsLeft > 0 && (
                         <Button variant="green" size="sm" onClick={() => handleJoin(sr)}>Join</Button>
