@@ -19,6 +19,8 @@ import {
   Megaphone,
   Bell,
   User,
+  Sparkles,
+  MessageSquarePlus,
 } from 'lucide-react'
 
 const STORAGE_KEY = 'pity_onboarding_complete'
@@ -58,6 +60,12 @@ const groups: FeatureGroup[] = [
         color: 'bg-yellow-100 text-yellow-700',
         title: 'My Rounds',
         description: 'View all your rounds, select which one counts for monthly scoring, and track attestation status.',
+      },
+      {
+        icon: Sparkles,
+        color: 'bg-purple-100 text-purple-700',
+        title: 'Exhibition',
+        description: 'Casual fun-mode games with friends — skins, match play, stableford, team formats, plus Mario Kart-style cards. Doesn\u2019t affect tour standings.',
       },
     ],
   },
@@ -137,6 +145,12 @@ const groups: FeatureGroup[] = [
         title: 'Notifications',
         description: 'The bell icon shows round submissions, attestations, and LFG alerts. Enable push for phone notifications.',
       },
+      {
+        icon: MessageSquarePlus,
+        color: 'bg-blue-100 text-blue-700',
+        title: 'Feedback',
+        description: 'Report a bug, suggest an idea, or ask a question. Submissions go straight to the developer and you\u2019ll see replies here.',
+      },
     ],
   },
 ]
@@ -204,7 +218,7 @@ export function OnboardingTour() {
             <div className="p-5 pb-3 border-b shrink-0">
               <h2 className="text-lg font-bold">What You Can Do</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Tap any feature to learn more — or just dive in!
+                A quick tour of everything inside — dive in when you&apos;re ready!
               </p>
             </div>
 
