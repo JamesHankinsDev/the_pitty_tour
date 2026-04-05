@@ -264,7 +264,9 @@ service cloud.firestore {
       allow create: if authed()
         && request.resource.data.uid == request.auth.uid;
       allow delete: if authed();
-      allow update: if false;
+      // Only the reactions map may change; all other fields must be unchanged.
+      allow update: if authed()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']);
     }
 
     // ─── Feedback ────────────────────────────────────────────────────────

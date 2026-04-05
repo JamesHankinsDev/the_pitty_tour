@@ -499,7 +499,8 @@ export async function sendMessage(
   displayName: string,
   photoURL: string,
   text: string,
-  type: 'chat' | 'lfg' = 'chat'
+  type: 'chat' | 'lfg' = 'chat',
+  mentions: string[] = []
 ): Promise<void> {
   if (guardDemoWrite('Sending messages')) return
   await addDoc(collection(db, COLLECTIONS.MESSAGES), {
@@ -508,6 +509,7 @@ export async function sendMessage(
     photoURL,
     text: text.trim(),
     type,
+    mentions,
     createdAt: serverTimestamp(),
   })
 }
@@ -533,6 +535,36 @@ export function subscribeToMessages(
 export async function deleteMessage(messageId: string): Promise<void> {
   if (guardDemoWrite('Deleting messages')) return
   await deleteDoc(doc(db, COLLECTIONS.MESSAGES, messageId))
+}
+
+/**
+ * Toggle a reaction on a message. Returns the author's uid and whether
+ * the reaction was newly added (vs. removed) so callers can notify the author.
+ */
+export async function toggleMessageReaction(
+  messageId: string,
+  emoji: string,
+  uid: string
+): Promise<{ added: boolean; authorUid: string } | null> {
+  if (guardDemoWrite('Reacting to messages')) return null
+  const ref = doc(db, COLLECTIONS.MESSAGES, messageId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return null
+  const data = snap.data() as Message
+  const existing = data.reactions ?? {}
+  const list = existing[emoji] ?? []
+  const hasReacted = list.includes(uid)
+  const nextList = hasReacted ? list.filter((u) => u !== uid) : [...list, uid]
+
+  const nextReactions: Record<string, string[]> = { ...existing }
+  if (nextList.length === 0) {
+    delete nextReactions[emoji]
+  } else {
+    nextReactions[emoji] = nextList
+  }
+
+  await updateDoc(ref, { reactions: nextReactions })
+  return { added: !hasReacted, authorUid: data.uid }
 }
 
 // ─── Looking For Partner ────────────────────────────────────────────────────

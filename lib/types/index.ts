@@ -37,7 +37,13 @@ export interface Message {
   text: string
   createdAt: Timestamp
   type: 'chat' | 'lfg'  // lfg = looking-for-group announcement
+  reactions?: { [emoji: string]: string[] }  // emoji → array of uids who reacted
+  mentions?: string[]  // uids tagged in the message text with @
 }
+
+// Shared set of available reaction emojis (keep this list short; icons need
+// to fit in a compact popover on mobile).
+export const MESSAGE_REACTIONS = ['👍', '❤️', '😂', '🎉', '⛳', '😢'] as const
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 export type NotificationType =
@@ -47,6 +53,8 @@ export type NotificationType =
   | 'lfg'               // someone is looking for a partner
   | 'leaderboard_change' // your rank changed
   | 'admin'             // admin announcement
+  | 'mention'           // you were @-tagged in a message
+  | 'reaction'          // someone reacted to your message
 
 export interface Notification {
   id: string

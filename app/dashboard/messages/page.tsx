@@ -6,11 +6,14 @@ import {
   sendMessage,
   subscribeToMessages,
   deleteMessage,
+  toggleMessageReaction,
   setLookingForPartner,
   subscribeToLFGPlayers,
   notifyAllPlayers,
+  createNotification,
 } from '@/lib/firebase/firestore'
-import { sendPushToAll } from '@/lib/firebase/push'
+import { sendPush, sendPushToAll } from '@/lib/firebase/push'
+import { useUsers } from '@/contexts/UsersContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,8 +29,10 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
+  SmilePlus,
 } from 'lucide-react'
 import type { Message, UserProfile } from '@/lib/types'
+import { MESSAGE_REACTIONS } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,17 +45,101 @@ function timeAgo(ts: { seconds: number } | undefined): string {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+// Resolve @-mentions in a chunk of text against the known users list.
+// Matches against each user's displayName (longest-first, so "John Smith"
+// beats "John" when both exist). Returns the set of tagged uids.
+function extractMentions(text: string, users: UserProfile[]): string[] {
+  const uids = new Set<string>()
+  // Sort longest first to prevent shorter names shadowing longer ones
+  const sorted = [...users].sort((a, b) => b.displayName.length - a.displayName.length)
+  for (const u of sorted) {
+    if (!u.displayName) continue
+    const escaped = u.displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(`@${escaped}(?![A-Za-z0-9_])`, 'g')
+    if (re.test(text)) {
+      uids.add(u.uid)
+    }
+  }
+  return Array.from(uids)
+}
+
+// Render message text with @mentions styled. Any mentioned user's full
+// displayName, preceded by @, gets a highlighted pill.
+function renderWithMentions(
+  text: string,
+  mentionedUids: string[],
+  users: UserProfile[],
+  ownBubble: boolean
+): React.ReactNode[] {
+  if (mentionedUids.length === 0) return [text]
+  const names = mentionedUids
+    .map((uid) => users.find((u) => u.uid === uid)?.displayName)
+    .filter((n): n is string => Boolean(n))
+    .sort((a, b) => b.length - a.length)
+  if (names.length === 0) return [text]
+  const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const re = new RegExp(`@(${escaped.join('|')})(?![A-Za-z0-9_])`, 'g')
+  const parts: React.ReactNode[] = []
+  let last = 0
+  let match: RegExpExecArray | null
+  let i = 0
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > last) {
+      parts.push(text.slice(last, match.index))
+    }
+    parts.push(
+      <span
+        key={`m-${i++}`}
+        className={`font-semibold rounded px-1 ${
+          ownBubble
+            ? 'bg-white/20 text-white'
+            : 'bg-green-100 text-green-800'
+        }`}
+      >
+        {match[0]}
+      </span>
+    )
+    last = match.index + match[0].length
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return parts
+}
+
 function MessageBubble({
   msg,
   isOwn,
   isAdmin,
+  currentUid,
+  users,
   onDelete,
+  onToggleReaction,
 }: {
   msg: Message
   isOwn: boolean
   isAdmin: boolean
+  currentUid: string | null
+  users: UserProfile[]
   onDelete: (id: string) => void
+  onToggleReaction: (id: string, emoji: string) => void
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  // Close picker on outside click
+  const pickerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!pickerOpen) return
+    const handle = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [pickerOpen])
+
+  const reactions = msg.reactions ?? {}
+  const reactionEntries = Object.entries(reactions).filter(([, uids]) => uids.length > 0)
+
   return (
     <div className={`flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
       <Avatar className="w-8 h-8 shrink-0 mt-1">
@@ -66,23 +155,93 @@ function MessageBubble({
             {timeAgo(msg.createdAt as any)}
           </span>
         </div>
-        <div
-          className={`rounded-2xl px-3.5 py-2 text-sm ${
-            msg.type === 'lfg'
-              ? 'bg-yellow-50 border border-yellow-200 text-yellow-900'
-              : isOwn
-              ? 'bg-green-600 text-white'
-              : 'bg-muted text-foreground'
-          }`}
-        >
-          {msg.type === 'lfg' && (
-            <div className="flex items-center gap-1.5 mb-1">
-              <MapPin className="w-3 h-3" />
-              <span className="text-xs font-semibold uppercase tracking-wide">Looking for Partner</span>
+        <div className="group relative">
+          <div
+            className={`rounded-2xl px-3.5 py-2 text-sm ${
+              msg.type === 'lfg'
+                ? 'bg-yellow-50 border border-yellow-200 text-yellow-900'
+                : isOwn
+                ? 'bg-green-600 text-white'
+                : 'bg-muted text-foreground'
+            }`}
+          >
+            {msg.type === 'lfg' && (
+              <div className="flex items-center gap-1.5 mb-1">
+                <MapPin className="w-3 h-3" />
+                <span className="text-xs font-semibold uppercase tracking-wide">Looking for Partner</span>
+              </div>
+            )}
+            <p className="whitespace-pre-wrap break-words">
+              {renderWithMentions(msg.text, msg.mentions ?? [], users, isOwn && msg.type !== 'lfg')}
+            </p>
+          </div>
+
+          {/* React button */}
+          {currentUid && (
+            <button
+              onClick={() => setPickerOpen((v) => !v)}
+              aria-label="Add reaction"
+              className={`absolute top-1/2 -translate-y-1/2 ${
+                isOwn ? '-left-7' : '-right-7'
+              } opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-foreground`}
+            >
+              <SmilePlus className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Emoji picker popover */}
+          {pickerOpen && (
+            <div
+              ref={pickerRef}
+              className={`absolute z-20 top-full mt-1 ${
+                isOwn ? 'right-0' : 'left-0'
+              } bg-background border rounded-full shadow-lg px-1.5 py-1 flex items-center gap-0.5`}
+            >
+              {MESSAGE_REACTIONS.map((emoji) => {
+                const active = (reactions[emoji] ?? []).includes(currentUid ?? '')
+                return (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      onToggleReaction(msg.id, emoji)
+                      setPickerOpen(false)
+                    }}
+                    className={`w-8 h-8 flex items-center justify-center rounded-full text-lg transition-transform hover:scale-125 ${
+                      active ? 'bg-green-100' : ''
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                )
+              })}
             </div>
           )}
-          <p className="whitespace-pre-wrap break-words">{msg.text}</p>
         </div>
+
+        {/* Reaction chips */}
+        {reactionEntries.length > 0 && (
+          <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            {reactionEntries.map(([emoji, uids]) => {
+              const mine = currentUid ? uids.includes(currentUid) : false
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => currentUid && onToggleReaction(msg.id, emoji)}
+                  disabled={!currentUid}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-xs transition-colors ${
+                    mine
+                      ? 'bg-green-50 border-green-300 text-green-800'
+                      : 'bg-background border-border text-muted-foreground hover:bg-accent'
+                  }`}
+                >
+                  <span>{emoji}</span>
+                  <span className="font-medium">{uids.length}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
         {(isOwn || isAdmin) && (
           <button
             onClick={() => onDelete(msg.id)}
@@ -198,12 +357,30 @@ function LFGPanel({
 
 export default function MessagesPage() {
   const { profile, user, isDemo } = useAuth()
+  const { users } = useUsers()
   const [messages, setMessages] = useState<Message[]>([])
   const [lfgPlayers, setLfgPlayers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // @-mention autocomplete state. `mentionQuery` is the partial string
+  // after @ (or null if not actively picking). `mentionStart` is the index
+  // of the @ character in the text so we can replace it on selection.
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionStart, setMentionStart] = useState(0)
+  const [mentionIndex, setMentionIndex] = useState(0)
+
+  const mentionMatches = mentionQuery === null
+    ? []
+    : users
+        .filter((u) =>
+          u.uid !== user?.uid &&
+          u.displayName?.toLowerCase().includes(mentionQuery.toLowerCase())
+        )
+        .slice(0, 6)
 
   useEffect(() => {
     if (isDemo) {
@@ -231,14 +408,42 @@ export default function MessagesPage() {
   const handleSend = async () => {
     if (!text.trim() || !profile || !user) return
     setSending(true)
+    const body = text.trim()
+    const mentions = extractMentions(body, users).filter((uid) => uid !== user.uid)
     try {
       await sendMessage(
         user.uid,
         profile.displayName,
         profile.photoURL,
-        text
+        body,
+        'chat',
+        mentions
       )
       setText('')
+      setMentionQuery(null)
+
+      // Fire-and-forget mention notifications
+      if (mentions.length > 0) {
+        const preview = body.length > 80 ? `${body.slice(0, 80)}…` : body
+        for (const uid of mentions) {
+          createNotification({
+            recipientUid: uid,
+            type: 'mention',
+            title: `${profile.displayName} mentioned you`,
+            body: preview,
+            link: '/dashboard/messages',
+            actorUid: user.uid,
+            actorName: profile.displayName,
+            actorPhotoURL: profile.photoURL,
+          }).catch(() => {})
+        }
+        sendPush({
+          recipientUids: mentions,
+          title: `${profile.displayName} mentioned you`,
+          body: preview,
+          link: '/dashboard/messages',
+        })
+      }
     } catch {
       toast.error('Failed to send message.')
     } finally {
@@ -251,6 +456,39 @@ export default function MessagesPage() {
       await deleteMessage(id)
     } catch {
       toast.error('Failed to delete message.')
+    }
+  }
+
+  const handleToggleReaction = async (id: string, emoji: string) => {
+    if (!user || !profile) return
+    try {
+      const result = await toggleMessageReaction(id, emoji, user.uid)
+      // Notify the author only when a reaction was newly added, and skip self-reactions
+      if (result?.added && result.authorUid !== user.uid) {
+        const title = `${profile.displayName} reacted ${emoji}`
+        const msg = messages.find((m) => m.id === id)
+        const snippet = msg?.text
+          ? msg.text.length > 80 ? `${msg.text.slice(0, 80)}…` : msg.text
+          : 'to your message'
+        createNotification({
+          recipientUid: result.authorUid,
+          type: 'reaction',
+          title,
+          body: snippet,
+          link: '/dashboard/messages',
+          actorUid: user.uid,
+          actorName: profile.displayName,
+          actorPhotoURL: profile.photoURL,
+        }).catch(() => {})
+        sendPush({
+          recipientUids: [result.authorUid],
+          title,
+          body: snippet,
+          link: '/dashboard/messages',
+        })
+      }
+    } catch {
+      toast.error('Failed to react.')
     }
   }
 
@@ -295,7 +533,81 @@ export default function MessagesPage() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  // Detect active @query before the cursor so we can show the autocomplete
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setText(value)
+    const cursor = e.target.selectionStart ?? value.length
+    const upto = value.slice(0, cursor)
+    const atIdx = upto.lastIndexOf('@')
+    if (atIdx === -1) {
+      setMentionQuery(null)
+      return
+    }
+    // Must be at start-of-string or preceded by whitespace
+    const prevChar = atIdx > 0 ? upto[atIdx - 1] : ' '
+    if (prevChar !== ' ' && prevChar !== '\n' && atIdx !== 0) {
+      setMentionQuery(null)
+      return
+    }
+    const query = upto.slice(atIdx + 1)
+    // No spaces allowed in an active query (user has moved past the mention)
+    if (/[\n]/.test(query) || query.length > 30) {
+      setMentionQuery(null)
+      return
+    }
+    // Only activate if user is still typing the name (allow letters, spaces, digits)
+    if (!/^[A-Za-z0-9 ]*$/.test(query)) {
+      setMentionQuery(null)
+      return
+    }
+    setMentionQuery(query)
+    setMentionStart(atIdx)
+    setMentionIndex(0)
+  }
+
+  const applyMention = (u: UserProfile) => {
+    if (mentionQuery === null) return
+    const before = text.slice(0, mentionStart)
+    const after = text.slice(mentionStart + 1 + mentionQuery.length)
+    const inserted = `@${u.displayName} `
+    const next = `${before}${inserted}${after}`
+    setText(next)
+    setMentionQuery(null)
+    // Move cursor to just after inserted mention
+    const newCursor = (before + inserted).length
+    requestAnimationFrame(() => {
+      if (inputRef.current) {
+        inputRef.current.focus()
+        inputRef.current.setSelectionRange(newCursor, newCursor)
+      }
+    })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Autocomplete navigation takes priority
+    if (mentionQuery !== null && mentionMatches.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setMentionIndex((i) => (i + 1) % mentionMatches.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setMentionIndex((i) => (i - 1 + mentionMatches.length) % mentionMatches.length)
+        return
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        applyMention(mentionMatches[mentionIndex])
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setMentionQuery(null)
+        return
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -350,19 +662,55 @@ export default function MessagesPage() {
                   msg={msg}
                   isOwn={msg.uid === user?.uid}
                   isAdmin={profile?.isAdmin ?? false}
+                  currentUid={user?.uid ?? null}
+                  users={users}
                   onDelete={handleDelete}
+                  onToggleReaction={handleToggleReaction}
                 />
               ))
             )}
           </div>
 
           {/* Input */}
-          <div className="border-t p-3 flex gap-2">
+          <div className="border-t p-3 flex gap-2 relative">
+            {/* Mention autocomplete */}
+            {mentionQuery !== null && mentionMatches.length > 0 && (
+              <div className="absolute left-3 right-16 bottom-full mb-2 bg-background border rounded-lg shadow-lg overflow-hidden z-10">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 pt-2 pb-1">
+                  Mention
+                </p>
+                {mentionMatches.map((u, i) => (
+                  <button
+                    key={u.uid}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      applyMention(u)
+                    }}
+                    onMouseEnter={() => setMentionIndex(i)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                      i === mentionIndex ? 'bg-accent' : 'hover:bg-accent/50'
+                    }`}
+                  >
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={u.photoURL} />
+                      <AvatarFallback className="text-xs">
+                        {u.displayName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{u.displayName}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <Input
+              ref={inputRef}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={handleTextChange}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
+              onBlur={() => setTimeout(() => setMentionQuery(null), 100)}
+              placeholder="Type a message… use @ to mention"
               className="flex-1"
               maxLength={500}
               disabled={sending}

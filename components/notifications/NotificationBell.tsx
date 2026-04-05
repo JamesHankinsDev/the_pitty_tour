@@ -15,6 +15,8 @@ import {
   Shield,
   MessageSquare,
   X,
+  AtSign,
+  Smile,
 } from 'lucide-react'
 import type { NotificationType } from '@/lib/types'
 
@@ -26,6 +28,8 @@ function getNotifIcon(type: NotificationType) {
     case 'lfg': return Users
     case 'leaderboard_change': return BarChart3
     case 'admin': return Shield
+    case 'mention': return AtSign
+    case 'reaction': return Smile
     default: return Bell
   }
 }
@@ -38,6 +42,8 @@ function getNotifColor(type: NotificationType) {
     case 'lfg': return 'text-yellow-600 bg-yellow-50'
     case 'leaderboard_change': return 'text-purple-600 bg-purple-50'
     case 'admin': return 'text-red-600 bg-red-50'
+    case 'mention': return 'text-green-600 bg-green-50'
+    case 'reaction': return 'text-pink-600 bg-pink-50'
     default: return 'text-muted-foreground bg-muted'
   }
 }
