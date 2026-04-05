@@ -10,6 +10,7 @@ import { useActiveSeason } from '@/lib/hooks/useSeason'
 import { submitRound, notifyAllPlayers, subscribeToCourses } from '@/lib/firebase/firestore'
 import { sendPushToAll } from '@/lib/firebase/push'
 import type { Course } from '@/lib/types'
+import { searchCoursesApi, getAvailableTees, type ApiCourseResult, type TeeOption } from '@/lib/utils/courseSearch'
 import {
   calculateNetScore,
   calculateDifferential,
@@ -100,11 +101,31 @@ export default function SubmitRoundPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [courseSearch, setCourseSearch] = useState('')
   const [showCourseSuggestions, setShowCourseSuggestions] = useState(false)
+  const [apiResults, setApiResults] = useState<ApiCourseResult[]>([])
+  const [searchingApi, setSearchingApi] = useState(false)
+  const [teePickerCourse, setTeePickerCourse] = useState<ApiCourseResult | null>(null)
+  // Shared tee-picker for local catalog courses too
+  const [catalogTeePicker, setCatalogTeePicker] = useState<Course | null>(null)
 
   useEffect(() => {
     const unsub = subscribeToCourses(setCourses)
     return unsub
   }, [])
+
+  // Debounced GolfCourseAPI search (with cache)
+  useEffect(() => {
+    if (courseSearch.length < 3 || !showCourseSuggestions) {
+      setApiResults([])
+      return
+    }
+    setSearchingApi(true)
+    const timer = setTimeout(async () => {
+      const results = await searchCoursesApi(courseSearch)
+      setApiResults(results)
+      setSearchingApi(false)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [courseSearch, showCourseSuggestions])
 
   const currentMonth = getCurrentMonthKey()
   const daysLeft = daysRemainingInMonth()
@@ -235,6 +256,106 @@ export default function SubmitRoundPage() {
 
   return (
     <div className="p-4 lg:p-8 max-w-2xl mx-auto space-y-6">
+      {/* Catalog course tee picker */}
+      {catalogTeePicker && catalogTeePicker.tees && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCatalogTeePicker(null)} />
+          <div className="relative bg-background rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-4 border-b">
+              <h3 className="font-bold text-base">Which tees did you play?</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{catalogTeePicker.name}</p>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {catalogTeePicker.tees.map((tee, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="w-full text-left px-4 py-3 hover:bg-accent transition-colors border-b last:border-0"
+                  onClick={() => {
+                    setValue('courseName', catalogTeePicker.name)
+                    setValue('courseRating', tee.rating)
+                    setValue('slopeRating', tee.slope)
+                    setCourseSearch(catalogTeePicker.name)
+                    toast.success(`Loaded ${catalogTeePicker.name} from ${tee.name} tees`)
+                    setCatalogTeePicker(null)
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{tee.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tee.gender === 'female' ? "Women's" : "Men's"}
+                        {tee.yards && ` · ${tee.yards} yds`}
+                        {tee.par && ` · Par ${tee.par}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{tee.rating}/{tee.slope}</p>
+                      <p className="text-xs text-muted-foreground">Rating/Slope</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="p-3 border-t">
+              <Button variant="ghost" size="sm" className="w-full" onClick={() => setCatalogTeePicker(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tee picker modal */}
+      {teePickerCourse && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setTeePickerCourse(null)} />
+          <div className="relative bg-background rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="p-4 border-b">
+              <h3 className="font-bold text-base">Which tees did you play?</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{teePickerCourse.name}</p>
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {getAvailableTees(teePickerCourse).map((tee) => (
+                <button
+                  key={tee.id}
+                  type="button"
+                  className="w-full text-left px-4 py-3 hover:bg-accent transition-colors border-b last:border-0"
+                  onClick={() => {
+                    setValue('courseName', teePickerCourse.name)
+                    setValue('courseRating', tee.rating)
+                    setValue('slopeRating', tee.slope)
+                    setCourseSearch(teePickerCourse.name)
+                    toast.success(`Loaded ${teePickerCourse.name} from ${tee.name} tees`)
+                    setTeePickerCourse(null)
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{tee.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tee.gender === 'female' ? "Women's" : "Men's"}
+                        {tee.yards && ` · ${tee.yards} yds`}
+                        {tee.par && ` · Par ${tee.par}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{tee.rating}/{tee.slope}</p>
+                      <p className="text-xs text-muted-foreground">Rating/Slope</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="p-3 border-t">
+              <Button variant="ghost" size="sm" className="w-full" onClick={() => setTeePickerCourse(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Flag className="w-6 h-6 text-green-600" />
@@ -330,38 +451,105 @@ export default function SubmitRoundPage() {
                   setTimeout(() => setShowCourseSuggestions(false), 200)
                 }}
               />
-              {/* Course catalog suggestions */}
+              {/* Course suggestions — local catalog + GolfCourseAPI */}
               {showCourseSuggestions && (() => {
-                const matches = courses.filter((c) =>
+                const localMatches = courses.filter((c) =>
                   c.name.toLowerCase().includes(courseSearch.toLowerCase())
                 ).slice(0, 5)
-                if (matches.length === 0) return null
+                const hasResults = localMatches.length > 0 || apiResults.length > 0 || searchingApi
+                if (!hasResults && courseSearch.length < 3) return null
                 return (
-                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg overflow-hidden">
-                    {matches.map((course) => (
-                      <button
-                        key={course.id}
-                        type="button"
-                        className="w-full text-left px-3 py-2.5 hover:bg-accent transition-colors border-b last:border-0"
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          setValue('courseName', course.name)
-                          if (course.courseRating) setValue('courseRating', course.courseRating)
-                          if (course.slopeRating) setValue('slopeRating', course.slopeRating)
-                          setCourseSearch(course.name)
-                          setShowCourseSuggestions(false)
-                          toast.success(`Loaded ${course.name} — rating & slope auto-filled`)
-                        }}
-                      >
-                        <p className="text-sm font-medium">{course.name}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {course.city}, {course.state}
-                          {course.courseRating && ` · Rating: ${course.courseRating}`}
-                          {course.slopeRating && ` · Slope: ${course.slopeRating}`}
-                        </p>
-                      </button>
-                    ))}
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg overflow-hidden max-h-80 overflow-y-auto">
+                    {localMatches.length > 0 && (
+                      <>
+                        <p className="px-3 pt-2 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">From Tour Catalog</p>
+                        {localMatches.map((course) => (
+                          <button
+                            key={`local-${course.id}`}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b last:border-0"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              setShowCourseSuggestions(false)
+                              // If course has multiple tees, open picker
+                              if (course.tees && course.tees.length > 1) {
+                                setCatalogTeePicker(course)
+                                return
+                              }
+                              // Otherwise use the primary rating/slope
+                              setValue('courseName', course.name)
+                              if (course.courseRating) setValue('courseRating', course.courseRating)
+                              if (course.slopeRating) setValue('slopeRating', course.slopeRating)
+                              setCourseSearch(course.name)
+                              toast.success(`Loaded ${course.name}`)
+                            }}
+                          >
+                            <p className="text-sm font-medium">{course.name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {course.city}, {course.state}
+                              {course.tees && course.tees.length > 0
+                                ? ` · ${course.tees.length} tees`
+                                : course.courseRating && course.slopeRating && ` · ${course.courseRating}/${course.slopeRating}`}
+                            </p>
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {apiResults.length > 0 && (
+                      <>
+                        <p className="px-3 pt-2 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">From GolfCourseAPI</p>
+                        {apiResults.map((course) => {
+                          const tees = getAvailableTees(course)
+                          return (
+                            <button
+                              key={`api-${course.id}`}
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b last:border-0"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                setShowCourseSuggestions(false)
+                                if (tees.length === 0) {
+                                  // No tee data — just fill the name
+                                  setValue('courseName', course.name)
+                                  setCourseSearch(course.name)
+                                  toast.info(`Loaded ${course.name} (no tee data available)`)
+                                  return
+                                }
+                                if (tees.length === 1) {
+                                  // One tee — use it directly
+                                  const t = tees[0]
+                                  setValue('courseName', course.name)
+                                  setValue('courseRating', t.rating)
+                                  setValue('slopeRating', t.slope)
+                                  setCourseSearch(course.name)
+                                  toast.success(`Loaded ${course.name} from ${t.name} tees`)
+                                  return
+                                }
+                                // Multiple tees — open picker
+                                setTeePickerCourse(course)
+                              }}
+                            >
+                              <p className="text-sm font-medium">{course.name}</p>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {[course.city, course.state, course.country].filter(Boolean).join(', ')}
+                                {tees.length > 0 && ` · ${tees.length} tee${tees.length !== 1 ? 's' : ''}`}
+                              </p>
+                            </button>
+                          )
+                        })}
+                      </>
+                    )}
+
+                    {searchingApi && apiResults.length === 0 && (
+                      <p className="px-3 py-2 text-xs text-muted-foreground italic">Searching GolfCourseAPI...</p>
+                    )}
+
+                    {!searchingApi && localMatches.length === 0 && apiResults.length === 0 && courseSearch.length >= 3 && (
+                      <p className="px-3 py-2 text-xs text-muted-foreground italic">No matches — enter course details manually below</p>
+                    )}
                   </div>
                 )
               })()}

@@ -107,6 +107,15 @@ export interface MonthClose {
 }
 
 // ─── Course Directory ───────────────────────────────────────────────────────
+export interface CourseTee {
+  name: string              // e.g. "Blue", "White", "Championship"
+  gender: 'male' | 'female'
+  rating: number
+  slope: number
+  yards?: number
+  par?: number
+}
+
 export interface Course {
   id: string
   name: string
@@ -115,8 +124,9 @@ export interface Course {
   holes: 9 | 18 | 27 | 36
   greenFeeMin: number       // typical low end, e.g. 35
   greenFeeMax: number       // typical high end, e.g. 75
-  courseRating?: number
-  slopeRating?: number
+  courseRating?: number     // primary/default tee rating
+  slopeRating?: number      // primary/default tee slope
+  tees?: CourseTee[]        // optional additional tee boxes (from GolfCourseAPI or manual)
   bookingUrl?: string       // link to book tee times
   websiteUrl?: string
   notes: string

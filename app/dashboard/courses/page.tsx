@@ -36,6 +36,8 @@ import {
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { Course, CourseReview } from '@/lib/types'
+import { searchCoursesApi, getAvailableTees, formatCourseLocation, type ApiCourseResult } from '@/lib/utils/courseSearch'
+import type { CourseTee } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -233,6 +235,8 @@ export default function CoursesPage() {
   const [showForm, setShowForm] = useState(false)
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [apiResults, setApiResults] = useState<ApiCourseResult[]>([])
+  const [searchingApi, setSearchingApi] = useState(false)
 
   // Form state
   const [form, setForm] = useState({
@@ -247,6 +251,7 @@ export default function CoursesPage() {
     bookingUrl: '',
     websiteUrl: '',
     notes: '',
+    tees: [] as CourseTee[],
   })
 
   useEffect(() => {
@@ -261,11 +266,27 @@ export default function CoursesPage() {
     return unsub
   }, [isDemo])
 
+  // Debounced GolfCourseAPI search (with cache)
+  useEffect(() => {
+    if (search.length < 3) {
+      setApiResults([])
+      return
+    }
+    setSearchingApi(true)
+    const timer = setTimeout(async () => {
+      const results = await searchCoursesApi(search)
+      setApiResults(results)
+      setSearchingApi(false)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [search])
+
   const resetForm = () => {
     setForm({
       name: '', city: '', state: '', holes: 18,
       greenFeeMin: '', greenFeeMax: '', courseRating: '',
       slopeRating: '', bookingUrl: '', websiteUrl: '', notes: '',
+      tees: [],
     })
   }
 
@@ -286,6 +307,7 @@ export default function CoursesPage() {
         greenFeeMax: Number(form.greenFeeMax) || 0,
         courseRating: form.courseRating ? Number(form.courseRating) : undefined,
         slopeRating: form.slopeRating ? Number(form.slopeRating) : undefined,
+        tees: form.tees.length > 0 ? form.tees : undefined,
         bookingUrl: form.bookingUrl.trim() || undefined,
         websiteUrl: form.websiteUrl.trim() || undefined,
         notes: form.notes.trim(),
@@ -520,6 +542,80 @@ export default function CoursesPage() {
         </Button>
       </div>
 
+      {/* GolfCourseAPI results — only show when searching + have results not already in catalog */}
+      {search.length >= 3 && (searchingApi || apiResults.length > 0) && (() => {
+        const localCourseNames = new Set(courses.map((c) => c.name.toLowerCase()))
+        const newApiResults = apiResults.filter((r) => !localCourseNames.has(r.name.toLowerCase()))
+        if (!searchingApi && newApiResults.length === 0) return null
+        return (
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardContent className="p-3">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">
+                Discover from GolfCourseAPI
+              </p>
+              {searchingApi && newApiResults.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Searching...</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {newApiResults.slice(0, 5).map((result) => {
+                    const tees = getAvailableTees(result)
+                    const defaultTee = tees[0] // hardest tee (sorted by slope desc)
+                    const allTees: CourseTee[] = tees.map((t) => ({
+                      name: t.name,
+                      gender: t.gender,
+                      rating: t.rating,
+                      slope: t.slope,
+                      yards: t.yards,
+                      par: t.par,
+                    }))
+                    return (
+                      <button
+                        key={result.id}
+                        onClick={() => {
+                          setForm({
+                            name: result.name,
+                            city: result.city,
+                            state: result.state,
+                            holes: 18,
+                            greenFeeMin: '',
+                            greenFeeMax: '',
+                            courseRating: defaultTee ? String(defaultTee.rating) : '',
+                            slopeRating: defaultTee ? String(defaultTee.slope) : '',
+                            bookingUrl: '',
+                            websiteUrl: '',
+                            notes: '',
+                            tees: allTees,
+                          })
+                          setShowForm(true)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                        className="w-full text-left p-2 rounded-lg hover:bg-white transition-colors border border-transparent hover:border-blue-200"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{result.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {formatCourseLocation(result)}
+                              {tees.length > 0 && ` · ${tees.length} tee${tees.length !== 1 ? 's' : ''}`}
+                            </p>
+                          </div>
+                          <Plus className="w-4 h-4 text-blue-600 shrink-0" />
+                        </div>
+                      </button>
+                    )
+                  })}
+                  {newApiResults.length > 5 && (
+                    <p className="text-xs text-muted-foreground px-2">
+                      +{newApiResults.length - 5} more results
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })()}
+
       {/* Course List */}
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
@@ -574,6 +670,26 @@ export default function CoursesPage() {
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
                           {course.courseRating && <span>Rating: {course.courseRating}</span>}
                           {course.slopeRating && <span>Slope: {course.slopeRating}</span>}
+                        </div>
+                      )}
+
+                      {/* Tee boxes */}
+                      {course.tees && course.tees.length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {course.tees.length} tee{course.tees.length !== 1 ? 's' : ''} available:
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {course.tees.map((t, i) => (
+                              <span
+                                key={i}
+                                className="text-xs px-1.5 py-0.5 rounded bg-muted font-medium"
+                                title={`${t.gender === 'female' ? "Women's" : "Men's"} · ${t.rating}/${t.slope}${t.yards ? ` · ${t.yards}y` : ''}`}
+                              >
+                                {t.name} {t.rating}/{t.slope}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
 
