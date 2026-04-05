@@ -65,9 +65,15 @@ export default function DashboardLayout({
           {/* Mobile nav */}
           <MobileNav />
 
-          {/* Main content */}
+          {/* Main content — extra padding accounts for safe-area insets on iOS */}
           <main className="flex-1 lg:ml-60">
-            <div className={`${isDemo ? 'pt-24 lg:pt-10' : 'pt-14 lg:pt-0'} pb-20 lg:pb-0`}>
+            <div
+              className={`${
+                isDemo
+                  ? 'pt-24 lg:pt-10'
+                  : 'pt-[calc(3.5rem+env(safe-area-inset-top))] lg:pt-0'
+              } pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0`}
+            >
               {children}
             </div>
           </main>

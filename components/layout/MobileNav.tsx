@@ -109,7 +109,10 @@ export function MobileNav() {
   return (
     <>
       {/* Top header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background border-b flex items-center justify-between px-4 h-14">
+      <header
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background border-b flex items-center justify-between px-4 h-14"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+      >
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 bg-green-600 rounded-md flex items-center justify-center">
             <span className="text-white font-black text-xs">P</span>
@@ -275,7 +278,10 @@ export function MobileNav() {
       )}
 
       {/* Bottom tab bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t">
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background border-t"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
         <div className="flex items-stretch">
           {bottomTabs.map((tab) => {
             const Icon = tab.icon
