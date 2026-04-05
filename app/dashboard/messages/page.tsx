@@ -365,6 +365,7 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const inputRowRef = useRef<HTMLDivElement>(null)
 
   // @-mention autocomplete state. `mentionQuery` is the partial string
   // after @ (or null if not actively picking). `mentionStart` is the index
@@ -404,6 +405,17 @@ export default function MessagesPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
+
+  // Close mention picker when user clicks/taps outside the input area
+  useEffect(() => {
+    if (mentionQuery === null) return
+    const handle = (e: PointerEvent) => {
+      if (inputRowRef.current?.contains(e.target as Node)) return
+      setMentionQuery(null)
+    }
+    document.addEventListener('pointerdown', handle)
+    return () => document.removeEventListener('pointerdown', handle)
+  }, [mentionQuery])
 
   const handleSend = async () => {
     if (!text.trim() || !profile || !user) return
@@ -672,10 +684,10 @@ export default function MessagesPage() {
           </div>
 
           {/* Input */}
-          <div className="border-t p-3 flex gap-2 relative">
-            {/* Mention autocomplete */}
+          <div ref={inputRowRef} className="border-t p-3 flex gap-2 relative">
+            {/* Mention autocomplete — rendered above the input bar */}
             {mentionQuery !== null && mentionMatches.length > 0 && (
-              <div className="absolute left-3 right-16 bottom-full mb-2 bg-background border rounded-lg shadow-lg overflow-hidden z-10">
+              <div className="absolute left-3 right-3 bottom-full mb-2 bg-background border rounded-lg shadow-lg overflow-hidden z-30">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 pt-2 pb-1">
                   Mention
                 </p>
@@ -683,7 +695,9 @@ export default function MessagesPage() {
                   <button
                     key={u.uid}
                     type="button"
-                    onMouseDown={(e) => {
+                    // Use pointerdown (fires before blur on both mouse & touch)
+                    // + preventDefault so the input keeps focus
+                    onPointerDown={(e) => {
                       e.preventDefault()
                       applyMention(u)
                     }}
@@ -709,7 +723,6 @@ export default function MessagesPage() {
               value={text}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
-              onBlur={() => setTimeout(() => setMentionQuery(null), 100)}
               placeholder="Type a message… use @ to mention"
               className="flex-1"
               maxLength={500}
