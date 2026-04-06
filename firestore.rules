@@ -19,6 +19,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    function hasRole(role) {
+      return authed()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && role in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles;
+    }
+
     // ─── Users ────────────────────────────────────────────────────────────
     match /users/{uid} {
       allow read: if authed();
@@ -131,7 +137,7 @@ service cloud.firestore {
       allow read: if authed();
       allow create: if authed();
       allow update: if authed();
-      allow delete: if authed();
+      allow delete: if admin();
 
       // Course reviews subcollection
       match /reviews/{reviewId} {
@@ -194,16 +200,23 @@ service cloud.firestore {
     // ─── Scheduled Rounds ──────────────────────────────────────────────────
     match /scheduledRounds/{roundId} {
       allow read: if authed();
-      allow create: if authed();
+      // Any authed user can create a scheduled round (they become host)
+      allow create: if authed()
+        && request.resource.data.hostUid == request.auth.uid;
+      // Any authed user can update (join/leave adds/removes uid from players array)
       allow update: if authed();
-      allow delete: if authed();
+      // Only the host or admin can delete
+      allow delete: if admin()
+        || (authed() && resource.data.hostUid == request.auth.uid);
     }
 
     // ─── Announcements ────────────────────────────────────────────────────
     match /announcements/{announcementId} {
       allow read: if authed();
-      // Commissioner, Secretary, or Admin can manage announcements
-      allow create, update, delete: if authed();
+      // Only Admin, Commissioner, or Secretary can manage announcements
+      allow create: if admin() || hasRole('commissioner') || hasRole('secretary');
+      allow update: if admin() || hasRole('commissioner') || hasRole('secretary');
+      allow delete: if admin();
     }
 
     // ─── Current Officers ─────────────────────────────────────────────────
