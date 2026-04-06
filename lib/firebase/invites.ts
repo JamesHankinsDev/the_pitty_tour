@@ -20,13 +20,18 @@ export const INVITES_COLLECTION = 'invites'
 
 // ─── Token Generation ────────────────────────────────────────────────────────
 
-/** Generates a URL-safe cryptographically random token (~28 chars). */
+/**
+ * Generates a URL-safe cryptographically random token (43 chars, 256 bits).
+ * Uses base64url encoding (no +, /, or = characters) so it's safe in URLs
+ * without encoding.
+ */
 function generateToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(21))
-  return Array.from(bytes)
-    .map((b) => b.toString(36).padStart(2, '0'))
-    .join('')
-    .slice(0, 28)
+  const bytes = crypto.getRandomValues(new Uint8Array(32))
+  // Base64url: replace +→-, /→_, strip padding =
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
 }
 
 // ─── Read ─────────────────────────────────────────────────────────────────────

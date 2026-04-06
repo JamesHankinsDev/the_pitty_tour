@@ -118,52 +118,25 @@ export default function PrizePoolPage() {
       .finally(() => setLoadingRegs(false))
   }, [season])
 
-  if (seasonLoading || loadingRegs) {
-    return (
-      <div className="p-4 space-y-4">
-        <Skeleton className="h-8 w-40" />
-        <div className="grid grid-cols-2 gap-3">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
-        </div>
-      </div>
-    )
-  }
+  // ── Calculations (must be above early returns to satisfy hook ordering) ──
 
-  if (!season) {
-    return (
-      <div className="p-4 lg:p-8 text-center">
-        <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto mb-3" />
-        <p className="text-lg font-semibold">No Active Season</p>
-        <p className="text-muted-foreground text-sm mt-1">
-          No season is currently active.
-        </p>
-      </div>
-    )
-  }
-
-  // ── Calculations ──────────────────────────────────────────────────────────
-
-  const {
-    playerCount, paidRegs, totalForfeits, seasonMonths, totalSeasonMonths,
-    payoutMonths, monthlyDuesCollected, poolSplit, perfPurse, netPayouts,
-    grossPayouts, estimatedMonthlyContributions, estimatedSeasonPurse,
-    registrationFeePool, seasonBreakdown, seasonTop3, seasonBonuses,
-  } = useMemo(() => {
+  const calculations = useMemo(() => {
+    if (!season) return null
     const pc = registrations.length
     const paid = registrations.filter((r) => r.hasPaidRegistration)
     const forfeits = registrations.reduce((s, r) => s + r.totalForfeited, 0)
-    const months = getSeasonMonths(season!.year, season!.startMonth, season!.endMonth)
+    const months = getSeasonMonths(season.year, season.startMonth, season.endMonth)
     const totalMonths = months.length
     const pMonths = totalMonths - 1
 
-    const duesCollected = pc * season!.monthlyDue
+    const duesCollected = pc * season.monthlyDue
     const split = calculateMonthlyPoolSplit(duesCollected)
     const perf = calculatePerformancePurse(split.performancePurse)
     const net = calculateNetPayouts(perf.netPool)
     const gross = calculateGrossPayouts(perf.grossPool)
 
     const monthlyContrib = split.seasonContribution * totalMonths
-    const regFeePool = paid.length * season!.registrationFee
+    const regFeePool = paid.length * season.registrationFee
     const estPurse = monthlyContrib + regFeePool
     const sBrk = calculateSeasonPurse(estPurse)
     const sTop3 = calculateSeasonTop3(sBrk.top3Pool)
@@ -179,6 +152,36 @@ export default function PrizePoolPage() {
       seasonBreakdown: sBrk, seasonTop3: sTop3, seasonBonuses: sBonuses,
     }
   }, [registrations, season])
+
+  if (seasonLoading || loadingRegs) {
+    return (
+      <div className="p-4 space-y-4">
+        <Skeleton className="h-8 w-40" />
+        <div className="grid grid-cols-2 gap-3">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
+        </div>
+      </div>
+    )
+  }
+
+  if (!season || !calculations) {
+    return (
+      <div className="p-4 lg:p-8 text-center">
+        <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto mb-3" />
+        <p className="text-lg font-semibold">No Active Season</p>
+        <p className="text-muted-foreground text-sm mt-1">
+          No season is currently active.
+        </p>
+      </div>
+    )
+  }
+
+  const {
+    playerCount, paidRegs, totalForfeits, seasonMonths, totalSeasonMonths,
+    payoutMonths, monthlyDuesCollected, poolSplit, perfPurse, netPayouts,
+    grossPayouts, estimatedMonthlyContributions, estimatedSeasonPurse,
+    registrationFeePool, seasonBreakdown, seasonTop3, seasonBonuses,
+  } = calculations
 
   // Tour Championship = double purse (first month's contribution rolls into last month)
   const championshipPurse = poolSplit.performancePurse * 2
