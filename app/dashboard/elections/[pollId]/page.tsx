@@ -48,6 +48,15 @@ export default function ElectionDetailPage() {
   const uid = user?.uid ?? ''
   const userMap = useMemo(() => new Map(users.map((u) => [u.uid, u])), [users])
 
+  // Vote tally — must be above early returns to satisfy hook ordering
+  const voteCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const [, v] of votes) {
+      counts.set(v.optionId, (counts.get(v.optionId) ?? 0) + 1)
+    }
+    return counts
+  }, [votes])
+
   // Load election doc
   useEffect(() => {
     getDoc(doc(db, COLLECTIONS.POLLS, pollId))
@@ -94,15 +103,6 @@ export default function ElectionDetailPage() {
   const confirmed = candidates.filter((c) => c.acceptedNomination)
   const pending = candidates.filter((c) => !c.acceptedNomination && !c.declinedAt)
   const myNomination = candidates.find((c) => c.userId === uid && !c.declinedAt)
-
-  // Vote tally for results
-  const voteCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const [, v] of votes) {
-      counts.set(v.optionId, (counts.get(v.optionId) ?? 0) + 1)
-    }
-    return counts
-  }, [votes])
 
   const winnerId = phase === 'closed'
     ? Array.from(voteCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null

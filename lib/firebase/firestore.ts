@@ -17,6 +17,7 @@ import {
   arrayUnion,
   increment,
   limit,
+  collectionGroup,
   DocumentSnapshot,
   QuerySnapshot,
 } from 'firebase/firestore'
@@ -120,6 +121,120 @@ export async function updateUserProfile(
   if (guardDemoWrite('Updating profiles')) return;
   const docRef = doc(db, COLLECTIONS.USERS, uid)
   await updateDoc(docRef, data as Record<string, unknown>)
+
+  // If displayName or photoURL changed, cascade to denormalized copies
+  if (data.displayName !== undefined || data.photoURL !== undefined) {
+    syncDenormalizedUserData(uid, data.displayName, data.photoURL).catch((err) =>
+      console.warn('Denormalized sync failed (non-critical):', err)
+    )
+  }
+}
+
+/**
+ * After a user updates their profile, cascade the new displayName / photoURL
+ * to every collection that stores denormalized copies. Runs as a fire-and-forget
+ * background task — failures are logged but don't block the profile save.
+ *
+ * Firestore batches are limited to 500 writes, so we chunk if needed.
+ */
+async function syncDenormalizedUserData(
+  uid: string,
+  displayName?: string,
+  photoURL?: string
+): Promise<void> {
+  if (!displayName && photoURL === undefined) return
+
+  // Collect all document refs + updates to apply
+  const updates: Array<{
+    ref: ReturnType<typeof doc>
+    data: Record<string, unknown>
+  }> = []
+
+  // Helper: query a top-level collection for docs owned by this uid
+  async function collectFromCollection(
+    collectionName: string,
+    uidField: string,
+    fields: Record<string, unknown>
+  ) {
+    const q = query(
+      collection(db, collectionName),
+      where(uidField, '==', uid)
+    )
+    const snap = await getDocs(q)
+    for (const d of snap.docs) {
+      updates.push({ ref: d.ref, data: fields })
+    }
+  }
+
+  // Build the field map for each collection type
+  const nameAndPhoto: Record<string, unknown> = {}
+  if (displayName !== undefined) nameAndPhoto.displayName = displayName
+  if (photoURL !== undefined) nameAndPhoto.photoURL = photoURL
+
+  // 1. Messages — uid, displayName, photoURL
+  await collectFromCollection(COLLECTIONS.MESSAGES, 'uid', nameAndPhoto)
+
+  // 2. Feedback — uid, displayName, photoURL
+  await collectFromCollection(COLLECTIONS.FEEDBACK, 'uid', nameAndPhoto)
+
+  // 3. Announcements — postedBy (uid field), postedByName (name field)
+  if (displayName !== undefined) {
+    const q = query(
+      collection(db, COLLECTIONS.ANNOUNCEMENTS),
+      where('postedBy', '==', uid)
+    )
+    const snap = await getDocs(q)
+    for (const d of snap.docs) {
+      updates.push({ ref: d.ref, data: { postedByName: displayName } })
+    }
+  }
+
+  // 4. Notifications — actorUid, actorName, actorPhotoURL
+  const notifFields: Record<string, unknown> = {}
+  if (displayName !== undefined) notifFields.actorName = displayName
+  if (photoURL !== undefined) notifFields.actorPhotoURL = photoURL
+  if (Object.keys(notifFields).length > 0) {
+    await collectFromCollection(COLLECTIONS.NOTIFICATIONS, 'actorUid', notifFields)
+  }
+
+  // 5. Course reviews (subcollection: courses/{id}/reviews) — uid, displayName, photoURL
+  if (Object.keys(nameAndPhoto).length > 0) {
+    const reviewsQuery = query(
+      collectionGroup(db, 'reviews'),
+      where('uid', '==', uid)
+    )
+    const reviewSnap = await getDocs(reviewsQuery)
+    for (const d of reviewSnap.docs) {
+      updates.push({ ref: d.ref, data: nameAndPhoto })
+    }
+  }
+
+  // 6. Exhibition players (subcollection: exhibitionSessions/{id}/players/{uid})
+  //    Doc ID = userId, so we use collectionGroup + doc ID match
+  const playerFields: Record<string, unknown> = {}
+  if (displayName !== undefined) playerFields.displayName = displayName
+  if (photoURL !== undefined) playerFields.photoURL = photoURL
+  if (Object.keys(playerFields).length > 0) {
+    const playersQuery = query(
+      collectionGroup(db, 'players'),
+      where('userId', '==', uid)
+    )
+    const playerSnap = await getDocs(playersQuery)
+    for (const d of playerSnap.docs) {
+      updates.push({ ref: d.ref, data: playerFields })
+    }
+  }
+
+  // Apply all updates in batches of 500 (Firestore limit)
+  const BATCH_SIZE = 500
+  for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db)
+    const chunk = updates.slice(i, i + BATCH_SIZE)
+    for (const { ref, data } of chunk) {
+      batch.update(ref, data)
+    }
+    await batch.commit()
+  }
 }
 
 export function subscribeToUserProfile(
