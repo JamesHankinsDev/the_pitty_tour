@@ -45,25 +45,25 @@ const groups: FeatureGroup[] = [
     features: [
       {
         icon: Flag,
-        color: 'bg-green-100 text-green-700',
+        color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-400',
         title: 'Submit Rounds',
         description: 'Log 18-hole rounds for events or 9-hole rounds for practice. Sand saves and par-3 pars are tracked for skill bonuses.',
       },
       {
         icon: ScanLine,
-        color: 'bg-blue-100 text-blue-700',
+        color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-400',
         title: 'Attest & QR',
         description: 'A partner scans your QR code to verify your score. Find your QR on your Profile page.',
       },
       {
         icon: Trophy,
-        color: 'bg-yellow-100 text-yellow-700',
+        color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-400',
         title: 'My Rounds',
         description: 'View all your rounds, select which one counts for monthly scoring, and track attestation status.',
       },
       {
         icon: Sparkles,
-        color: 'bg-purple-100 text-purple-700',
+        color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-400',
         title: 'Exhibition',
         description: 'Casual fun-mode games with friends — skins, match play, stableford, team formats, plus Mario Kart-style cards. Doesn\u2019t affect tour standings.',
       },
@@ -75,25 +75,25 @@ const groups: FeatureGroup[] = [
     features: [
       {
         icon: BarChart3,
-        color: 'bg-yellow-100 text-yellow-700',
+        color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-400',
         title: 'Leaderboard & Payouts',
         description: 'Gross and net standings update live. Top 3 Net, Top 2 Gross, and skill bonuses paid monthly.',
       },
       {
         icon: Users,
-        color: 'bg-green-100 text-green-700',
+        color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-400',
         title: 'Players & Courses',
         description: 'Browse Tour members and their handicaps. Find courses with green fees, ratings, reviews, and booking links.',
       },
       {
         icon: Calendar,
-        color: 'bg-blue-100 text-blue-700',
+        color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-400',
         title: 'Calendar',
         description: 'View scoring deadlines, schedule rounds with a tee time, and invite others to join.',
       },
       {
         icon: Award,
-        color: 'bg-yellow-100 text-yellow-700',
+        color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-400',
         title: 'Highlights',
         description: 'Season records, monthly champions, best differentials, and streak tracking.',
       },
@@ -105,19 +105,19 @@ const groups: FeatureGroup[] = [
     features: [
       {
         icon: Megaphone,
-        color: 'bg-yellow-100 text-yellow-700',
+        color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-400',
         title: 'Tour Info',
         description: 'Official announcements and the officer directory — all in one place.',
       },
       {
         icon: MessageSquare,
-        color: 'bg-blue-100 text-blue-700',
+        color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-400',
         title: 'Tour Board',
         description: 'Chat with the Tour and toggle "Looking for Partner" to find someone to play with.',
       },
       {
         icon: Vote,
-        color: 'bg-purple-100 text-purple-700',
+        color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-400',
         title: 'Polls & Elections',
         description: 'Vote on course choices, format ideas, and Tour officer elections.',
       },
@@ -129,25 +129,25 @@ const groups: FeatureGroup[] = [
     features: [
       {
         icon: Medal,
-        color: 'bg-purple-100 text-purple-700',
+        color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-400',
         title: 'My Progress',
         description: 'Track your badges (26 achievements!) and marker passport with bonus points for unique playing partners.',
       },
       {
         icon: User,
-        color: 'bg-green-100 text-green-700',
+        color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-400',
         title: 'Profile',
         description: 'Edit your info, view your QR code, and see your handicap trend chart over the season.',
       },
       {
         icon: Bell,
-        color: 'bg-red-100 text-red-700',
+        color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-400',
         title: 'Notifications',
         description: 'The bell icon shows round submissions, attestations, and LFG alerts. Enable push for phone notifications.',
       },
       {
         icon: MessageSquarePlus,
-        color: 'bg-blue-100 text-blue-700',
+        color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-400',
         title: 'Feedback',
         description: 'Report a bug, suggest an idea, or ask a question. Submissions go straight to the developer and you\u2019ll see replies here.',
       },
@@ -174,14 +174,15 @@ export function OnboardingTour() {
     localStorage.setItem(STORAGE_KEY, 'true')
   }
 
-  if (!show) return null
-
   // Dismiss on Escape key
   useEffect(() => {
+    if (!show) return
     const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') handleComplete() }
     document.addEventListener('keydown', handle)
     return () => document.removeEventListener('keydown', handle)
-  })
+  }, [show])
+
+  if (!show) return null
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Welcome tour">

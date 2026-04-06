@@ -40,7 +40,7 @@ const ROLE_GUIDES: RoleGuide[] = [
     officeKey: 'commissioner',
     officeTitle: 'Commissioner',
     icon: Crown,
-    color: 'bg-yellow-100 text-yellow-700',
+    color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-400',
     congratsLine: 'You are the face of the PITY Tour.',
     description:
       'As Commissioner, you make final calls on escalated rules disputes, set the season calendar, and represent the Tour publicly.',
@@ -60,7 +60,7 @@ const ROLE_GUIDES: RoleGuide[] = [
     officeKey: 'secretary',
     officeTitle: 'Secretary',
     icon: BookOpen,
-    color: 'bg-purple-100 text-purple-700',
+    color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-400',
     congratsLine: 'You keep the Tour running smoothly.',
     description:
       'As Secretary, you handle official league communications, manage the announcement board, and keep records of Tour decisions.',
@@ -79,7 +79,7 @@ const ROLE_GUIDES: RoleGuide[] = [
     officeKey: 'treasurer',
     officeTitle: 'Treasurer',
     icon: Scale,
-    color: 'bg-blue-100 text-blue-700',
+    color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-400',
     congratsLine: 'You guard the Tour\'s finances.',
     description:
       'As Treasurer, you track dues collection, forfeit payments, and prize pool balances. You coordinate end-of-season payouts.',
@@ -98,7 +98,7 @@ const ROLE_GUIDES: RoleGuide[] = [
     officeKey: 'master_at_arms',
     officeTitle: 'Master at Arms',
     icon: Shield,
-    color: 'bg-red-100 text-red-700',
+    color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-400',
     congratsLine: 'You protect the integrity of the Tour.',
     description:
       'As Master at Arms, you investigate score disputes, review flagged attestations, and issue rulings on rules questions.',
@@ -117,7 +117,7 @@ const ROLE_GUIDES: RoleGuide[] = [
     officeKey: 'handicap_chair',
     officeTitle: 'Handicap Chair',
     icon: Target,
-    color: 'bg-green-100 text-green-700',
+    color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-400',
     congratsLine: 'You ensure fair play through accurate handicaps.',
     description:
       'As Handicap Chair, you oversee handicap integrity, review scoring trends, and certify handicaps before major events.',
@@ -168,17 +168,18 @@ export function RoleOnboarding() {
     setStep(0)
   }
 
+  // Dismiss on Escape key
+  useEffect(() => {
+    if (!activeGuide) return
+    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') handleComplete() }
+    document.addEventListener('keydown', handle)
+    return () => document.removeEventListener('keydown', handle)
+  }, [activeGuide])
+
   if (!activeGuide) return null
 
   const Icon = activeGuide.icon
   const totalSteps = 3
-
-  // Dismiss on Escape key
-  useEffect(() => {
-    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') handleComplete() }
-    document.addEventListener('keydown', handle)
-    return () => document.removeEventListener('keydown', handle)
-  })
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Role onboarding">
@@ -252,7 +253,7 @@ export function RoleOnboarding() {
               {activeGuide.appFeatures.map((f) => {
                 const FIcon = f.icon
                 return (
-                  <div key={f.link} className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+                  <div key={f.link} className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
                     <FIcon className="w-5 h-5 text-green-600 shrink-0" />
                     <span className="text-sm font-medium flex-1">{f.label}</span>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
