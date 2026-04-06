@@ -4,7 +4,7 @@ import { verifyAuthHeader } from '@/lib/firebase/apiAuth'
 const GHIN_API_BASE = 'https://api2.ghin.com/api/v1'
 const FIREBASE_SESSION_URL =
   'https://firebaseinstallations.googleapis.com/v1/projects/ghin-mobile-app/installations'
-const GOOGLE_API_KEY = 'AIzaSyBxgTOAWxiud0HuaE5tN-5NTlzFnrtyz-I'
+const GOOGLE_API_KEY = process.env.GHIN_GOOGLE_API_KEY ?? ''
 const SESSION_DEFAULTS = {
   appId: '1:884417644529:web:47fb315bc6c70242f72650',
   authVersion: 'FIS_v2',
