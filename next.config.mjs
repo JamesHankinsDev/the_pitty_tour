@@ -26,7 +26,7 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               // Scripts: self + inline (Next.js needs it) + Firebase + Google APIs
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseio.com https://*.googleapis.com https://www.gstatic.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseio.com https://*.googleapis.com https://www.gstatic.com https://apis.google.com",
               // Styles: self + inline (Tailwind/Next.js injects styles)
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               // Fonts
@@ -38,7 +38,7 @@ const nextConfig = {
               // Web workers / service workers
               "worker-src 'self' blob:",
               // Frames: none (we don't embed iframes)
-              "frame-src 'self' https://*.firebaseapp.com",
+              "frame-src 'self' https://*.firebaseapp.com https://apis.google.com https://accounts.google.com",
               // Block all object/embed
               "object-src 'none'",
               // Form submissions only to self

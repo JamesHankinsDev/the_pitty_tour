@@ -21,32 +21,35 @@ const Avatar = React.forwardRef<
 Avatar.displayName = AvatarPrimitive.Root.displayName
 
 /**
- * AvatarImage — wraps next/image for automatic optimization (WebP, srcset,
- * lazy loading) while preserving Radix Avatar's fallback behavior.
- *
- * If src is empty/undefined, Radix never mounts the image so the
- * AvatarFallback renders instead.
+ * AvatarImage — uses next/image for automatic optimization (WebP, srcset,
+ * lazy loading). Tells Radix the image loaded/errored so AvatarFallback
+ * works correctly.
  */
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, src, alt, ...props }, ref) => {
-  // Radix AvatarPrimitive.Image handles the loaded/error state machine that
-  // controls whether the fallback shows. We render it as the outer wrapper
-  // (hidden via sr-only) so Radix tracks the src lifecycle, and layer the
-  // optimized next/image on top for the actual visual.
+  const [status, setStatus] = React.useState<'loading' | 'loaded' | 'error'>('loading')
+
+  // Reset status when src changes
+  React.useEffect(() => {
+    setStatus(src ? 'loading' : 'error')
+  }, [src])
+
   return (
     <>
-      {/* Hidden Radix image — drives fallback state only */}
+      {/* Hidden Radix image — only used to drive the fallback state.
+          We give it a 1x1 data URI when our next/image loads successfully,
+          or no src on error so Radix shows the fallback. */}
       <AvatarPrimitive.Image
         ref={ref}
         className="sr-only"
-        src={src}
+        src={status === 'loaded' ? 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==' : undefined}
         alt={alt ?? ''}
         {...props}
       />
       {/* Visible optimized image */}
-      {src && (
+      {src && status !== 'error' && (
         <Image
           src={src}
           alt={alt ?? ''}
@@ -54,6 +57,8 @@ const AvatarImage = React.forwardRef<
           sizes="48px"
           className={cn('aspect-square h-full w-full object-cover', className)}
           loading="lazy"
+          onLoad={() => setStatus('loaded')}
+          onError={() => setStatus('error')}
         />
       )}
     </>

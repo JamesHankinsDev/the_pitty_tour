@@ -143,15 +143,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Silently refresh handicap from GHIN for users who have linked their number
     if (userProfile?.ghinNumber) {
-      refreshHandicapFromGhin(userProfile).catch(() => {
+      refreshHandicapFromGhin(userProfile, firebaseUser).catch(() => {
         // Non-critical — silently ignore GHIN lookup failures on login
       })
     }
   }, [])
 
-  const refreshHandicapFromGhin = async (userProfile: UserProfile) => {
+  const refreshHandicapFromGhin = async (userProfile: UserProfile, fbUser?: User) => {
     const { authHeaders } = await import('@/lib/firebase/authFetch')
-    const headers = await authHeaders()
+    const headers = await authHeaders(fbUser)
     const res = await fetch('/api/ghin/lookup', {
       method: 'POST',
       headers,

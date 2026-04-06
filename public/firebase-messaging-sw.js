@@ -46,9 +46,10 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url)
 
-  // Don't interfere with Firebase / cross-origin
+  // Don't interfere with Firebase, auth, cross-origin, or internal paths
   if (url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/api/')) return
+  if (url.pathname.startsWith('/__/')) return  // Firebase auth handler
   if (url.pathname === '/firebase-messaging-sw.js') return
 
   // Next.js hashed static assets — cache-first, safe to keep forever
@@ -84,13 +85,21 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Other same-origin GETs — stale-while-revalidate
+  // Other same-origin GETs — stale-while-revalidate with size cap
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetchPromise = fetch(request)
         .then((res) => {
           const copy = res.clone()
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy))
+          caches.open(RUNTIME_CACHE).then((cache) => {
+            cache.put(request, copy)
+            // Evict oldest entries if cache grows too large
+            cache.keys().then((keys) => {
+              if (keys.length > 100) {
+                cache.delete(keys[0])
+              }
+            })
+          })
           return res
         })
         .catch(() => cached)

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from './AuthContext'
-import { subscribeToUsers } from '@/lib/firebase/firestore'
+import { getAllUsers } from '@/lib/firebase/firestore'
 import type { UserProfile } from '@/lib/types'
 
 interface UsersContextValue {
@@ -24,11 +24,10 @@ export function UsersProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    const unsub = subscribeToUsers((data) => {
-      setUsers(data)
-      setLoading(false)
-    })
-    return unsub
+    getAllUsers()
+      .then(setUsers)
+      .catch((err) => console.warn('Failed to load users:', err))
+      .finally(() => setLoading(false))
   }, [user, isDemo])
 
   // Build a uid → displayName lookup map so getUserName is O(1)
