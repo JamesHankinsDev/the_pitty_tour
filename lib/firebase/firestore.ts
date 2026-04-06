@@ -399,12 +399,14 @@ export async function getMonthRounds(
 
 export function subscribeToPlayerRounds(
   uid: string,
-  callback: (rounds: Round[]) => void
+  callback: (rounds: Round[]) => void,
+  roundLimit = 100
 ) {
   const q = query(
     collection(db, COLLECTIONS.ROUNDS),
     where('uid', '==', uid),
-    orderBy('submittedAt', 'desc')
+    orderBy('submittedAt', 'desc'),
+    limit(roundLimit)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Round)))
@@ -419,7 +421,8 @@ export function subscribeToMonthRounds(
   const q = query(
     collection(db, COLLECTIONS.ROUNDS),
     where('seasonId', '==', seasonId),
-    where('month', '==', month)
+    where('month', '==', month),
+    limit(500)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Round)))
@@ -519,7 +522,8 @@ export function subscribeToSeasonPoints(
 ) {
   const q = query(
     collection(db, COLLECTIONS.POINTS),
-    where('seasonId', '==', seasonId)
+    where('seasonId', '==', seasonId),
+    limit(500)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => d.data() as Points))
@@ -898,7 +902,8 @@ export function subscribeToCourses(
 ) {
   const q = query(
     collection(db, COLLECTIONS.COURSES),
-    orderBy('name', 'asc')
+    orderBy('name', 'asc'),
+    limit(200)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Course)))
@@ -950,7 +955,8 @@ export function subscribeToCourseReviews(
 ) {
   const q = query(
     collection(db, COLLECTIONS.COURSES, courseId, 'reviews'),
-    orderBy('createdAt', 'desc')
+    orderBy('createdAt', 'desc'),
+    limit(50)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as CourseReview)))
@@ -1001,7 +1007,8 @@ export async function closePoll(pollId: string): Promise<void> {
 export function subscribeToPolls(callback: (polls: Poll[]) => void) {
   const q = query(
     collection(db, COLLECTIONS.POLLS),
-    orderBy('createdAt', 'desc')
+    orderBy('createdAt', 'desc'),
+    limit(50)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Poll)))
@@ -1081,7 +1088,8 @@ export function subscribeToPollComments(
 ) {
   const q = query(
     collection(db, COLLECTIONS.POLLS, pollId, 'comments'),
-    orderBy('createdAt', 'desc')
+    orderBy('createdAt', 'desc'),
+    limit(100)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PollComment)))
@@ -1123,7 +1131,8 @@ export function subscribeToElections(callback: (elections: Election[]) => void) 
   const q = query(
     collection(db, COLLECTIONS.POLLS),
     where('type', '==', 'election'),
-    orderBy('createdAt', 'desc')
+    orderBy('createdAt', 'desc'),
+    limit(20)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Election)))
@@ -1329,7 +1338,8 @@ export function subscribeToFlaggedRounds(
 ) {
   const q = query(
     collection(db, COLLECTIONS.FLAGGED_ROUNDS),
-    orderBy('flaggedAt', 'desc')
+    orderBy('flaggedAt', 'desc'),
+    limit(50)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as FlaggedRound)))
@@ -1403,7 +1413,8 @@ export function subscribeToScheduledRounds(
 ) {
   const q = query(
     collection(db, COLLECTIONS.SCHEDULED_ROUNDS),
-    orderBy('date', 'asc')
+    orderBy('date', 'asc'),
+    limit(50)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduledRound)))
@@ -1600,7 +1611,8 @@ export function subscribeToCardLog(
 ) {
   const q = query(
     collection(db, COLLECTIONS.EXHIBITION_SESSIONS, sessionId, 'cardLog'),
-    orderBy('hole', 'asc')
+    orderBy('hole', 'asc'),
+    limit(200)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ExhibitionCardLogEntry)))
@@ -1731,7 +1743,8 @@ export function subscribeToAllFeedback(
 ) {
   const q = query(
     collection(db, COLLECTIONS.FEEDBACK),
-    orderBy('createdAt', 'desc')
+    orderBy('createdAt', 'desc'),
+    limit(200)
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Feedback)))
