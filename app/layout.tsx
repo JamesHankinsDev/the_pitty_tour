@@ -9,9 +9,21 @@ import { IOSInstallBanner } from '@/components/pwa/IOSInstallBanner'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://the-pity-tour.web.app'),
   title: 'PITY Tour — Players\' Invitational Tour Yearly',
-  description: 'Amateur golf league management platform for the PITY Tour',
+  description: 'A season-long amateur golf league with real prize pools, monthly majors, handicap scoring, and a points race to crown the Tour Champion.',
   applicationName: 'PITY Tour',
+  openGraph: {
+    title: 'PITY Tour',
+    description: 'A season-long amateur golf league with real prize pools, monthly majors, and a points race to crown the Tour Champion.',
+    siteName: 'PITY Tour',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PITY Tour',
+    description: 'A season-long amateur golf league with real prize pools, monthly majors, and a points race to crown the Tour Champion.',
+  },
   appleWebApp: {
     capable: true,
     title: 'PITY Tour',

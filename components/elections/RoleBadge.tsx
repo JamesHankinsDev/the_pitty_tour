@@ -6,7 +6,7 @@ const ROLE_CONFIG: Record<string, { label: string; icon: React.ElementType; clas
   commissioner: {
     label: 'Commissioner',
     icon: Crown,
-    className: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    className: 'bg-yellow-100 text-yellow-900 border-yellow-300',
   },
   treasurer: {
     label: 'Treasurer',

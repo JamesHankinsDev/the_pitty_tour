@@ -148,7 +148,7 @@ export function MobileNav() {
         <div className="lg:hidden fixed inset-0 z-50 bg-background flex flex-col">
           <div className="flex items-center justify-between px-4 h-14 border-b">
             <span className="font-bold text-green-700">Menu</span>
-            <button onClick={() => setMenuOpen(false)} className="p-2 -mr-2">
+            <button onClick={() => setMenuOpen(false)} className="p-2 -mr-2" aria-label="Close menu">
               <X className="w-5 h-5" />
             </button>
           </div>

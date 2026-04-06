@@ -173,10 +173,17 @@ export function RoleOnboarding() {
   const Icon = activeGuide.icon
   const totalSteps = 3
 
+  // Dismiss on Escape key
+  useEffect(() => {
+    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') handleComplete() }
+    document.addEventListener('keydown', handle)
+    return () => document.removeEventListener('keydown', handle)
+  })
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Role onboarding">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleComplete} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleComplete} aria-hidden="true" />
 
       {/* Card */}
       <div className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
@@ -191,6 +198,7 @@ export function RoleOnboarding() {
         <button
           onClick={handleComplete}
           className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground z-10"
+          aria-label="Close"
         >
           <X className="w-5 h-5" />
         </button>

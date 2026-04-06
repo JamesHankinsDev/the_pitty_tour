@@ -176,15 +176,23 @@ export function OnboardingTour() {
 
   if (!show) return null
 
+  // Dismiss on Escape key
+  useEffect(() => {
+    const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') handleComplete() }
+    document.addEventListener('keydown', handle)
+    return () => document.removeEventListener('keydown', handle)
+  })
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleComplete} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Welcome tour">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleComplete} aria-hidden="true" />
 
       <div className="relative bg-background rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
         {/* Close button */}
         <button
           onClick={handleComplete}
           className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground z-10"
+          aria-label="Close tutorial"
         >
           <X className="w-5 h-5" />
         </button>

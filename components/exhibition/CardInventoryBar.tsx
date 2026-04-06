@@ -68,8 +68,8 @@ export function CardInventoryBar({
 
       {/* Card detail sheet */}
       {selected && def && (
-        <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setSelected(null)} />
+        <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Card detail">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setSelected(null)} aria-hidden="true" />
           <div className="relative bg-background rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm overflow-hidden">
             <div className="p-4 border-b flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
@@ -81,6 +81,7 @@ export function CardInventoryBar({
               <button
                 onClick={() => setSelected(null)}
                 className="text-muted-foreground hover:text-foreground p-0.5"
+                aria-label="Close"
               >
                 <X className="w-5 h-5" />
               </button>
