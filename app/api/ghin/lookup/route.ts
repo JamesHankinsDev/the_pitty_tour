@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuthHeader } from '@/lib/firebase/apiAuth'
+import { createRateLimiter } from '@/lib/rateLimit'
+
+const limiter = createRateLimiter({ max: 10, windowMs: 60_000 })
 
 const GHIN_API_BASE = 'https://api2.ghin.com/api/v1'
 const FIREBASE_SESSION_URL =
@@ -85,6 +88,9 @@ export async function POST(req: NextRequest) {
   if (!uid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const limited = limiter.check(uid)
+  if (limited) return limited
 
   try {
     const { ghinNumber } = await req.json()

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuthHeader } from '@/lib/firebase/apiAuth'
+import { createRateLimiter } from '@/lib/rateLimit'
+
+const limiter = createRateLimiter({ max: 15, windowMs: 60_000 })
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,6 +19,9 @@ export async function GET(
   if (!uid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const limited = limiter.check(uid)
+  if (limited) return limited
 
   const id = params.id
   if (!id) {

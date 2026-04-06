@@ -4,6 +4,9 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminMessaging } from '@/lib/firebase/admin'
 import { verifyAuthHeader } from '@/lib/firebase/apiAuth'
+import { createRateLimiter } from '@/lib/rateLimit'
+
+const limiter = createRateLimiter({ max: 20, windowMs: 60_000 })
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
@@ -37,6 +40,9 @@ export async function POST(req: NextRequest) {
   if (!uid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const limited = limiter.check(uid)
+  if (limited) return limited
 
   try {
     const data: PushRequest = await req.json()
