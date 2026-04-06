@@ -1,4 +1,45 @@
 import type { Round, Registration, Season } from '../types'
+
+// ─── Forfeit split ──────────────────────────────────────────────────────────
+
+/**
+ * When a player forfeits (no valid round for the month), their dues are split:
+ * - 50% goes to this month's prize pool (boosts the performance purse)
+ * - 50% rolls forward to next month's pool
+ *
+ * Returns the amounts for a single player's forfeit.
+ */
+export function calculateForfeitSplit(monthlyDue: number): {
+  toCurrentPool: number
+  toNextMonth: number
+} {
+  const half = Math.round(monthlyDue * 0.5 * 100) / 100
+  return {
+    toCurrentPool: half,
+    toNextMonth: monthlyDue - half, // handles odd cents
+  }
+}
+
+/**
+ * Calculate the total forfeit contribution to this month's pool.
+ * @param forfeitCount - number of players who forfeited this month
+ * @param monthlyDue - the season's monthly due amount
+ * @param priorMonthRollover - forfeit rollover from the previous month (50% of last month's forfeits)
+ */
+export function calculateForfeitPoolContribution(
+  forfeitCount: number,
+  monthlyDue: number,
+  priorMonthRollover = 0
+): { thisMonthForfeitToPool: number; rolloverToNext: number; totalAddedToPool: number } {
+  const { toCurrentPool, toNextMonth } = calculateForfeitSplit(monthlyDue)
+  const thisMonthForfeitToPool = forfeitCount * toCurrentPool
+  const rolloverToNext = forfeitCount * toNextMonth
+  return {
+    thisMonthForfeitToPool,
+    rolloverToNext,
+    totalAddedToPool: thisMonthForfeitToPool + priorMonthRollover,
+  }
+}
 import {
   calculateMonthlyPoolSplit,
   calculatePerformancePurse,
@@ -48,6 +89,7 @@ export interface MonthPayoutResult {
   totalSaves: number
   totalPar3Pars: number
   playerCount: number
+  isChampionship: boolean
 }
 
 // ─── Pick one round per player ──────────────────────────────────────────────
@@ -120,33 +162,85 @@ function tieSplitPayout(
   return Math.round((combined / tiedCount) * 100) / 100
 }
 
-// ─── Double-dip resolution ──────────────────────────────────────────────────
+// ─── Double-dip resolution with cascading ──────────────────────────────────
 
 /**
- * If a player qualifies for both gross and net payouts, they keep whichever
- * is higher and the other is zeroed out. The vacated slot is NOT cascaded.
+ * Build a payout map for a ranked list, paying the top N positions.
+ * Handles ties by splitting combined payouts for shared positions.
+ * `excludeUids` are removed from the ranking before payout assignment
+ * (this is how cascading works — double-dip players vacate a slot,
+ * the next player slides up).
  */
-function resolveDoubleDip(previews: PayoutPreview[]): PayoutPreview[] {
-  return previews.map((p) => {
-    if (p.grossPayout > 0 && p.netPayout > 0) {
-      if (p.grossPayout >= p.netPayout) {
-        return {
-          ...p,
-          netPayout: 0,
-          doubleDipResolution: 'gross' as const,
-          totalPayout: p.grossPayout + p.savesPayout + p.par3Payout,
-        }
-      } else {
-        return {
-          ...p,
-          grossPayout: 0,
-          doubleDipResolution: 'net' as const,
-          totalPayout: p.netPayout + p.savesPayout + p.par3Payout,
+function buildPayoutMap(
+  allPlayers: PlayerMonthData[],
+  rankFn: (players: PlayerMonthData[]) => RankedPlayer[],
+  pool: number,
+  payoutPcts: number[],
+  excludeUids: Set<string>
+): Map<string, { rank: number; payout: number }> {
+  const eligible = allPlayers.filter((p) => !excludeUids.has(p.uid))
+  const ranked = rankFn(eligible)
+
+  function countTied(rank: number): number {
+    return ranked.filter((p) => p.rank === rank).length
+  }
+
+  const map = new Map<string, { rank: number; payout: number }>()
+  for (const p of ranked) {
+    const payout = p.rank <= payoutPcts.length
+      ? tieSplitPayout(p.rank, countTied(p.rank), pool, payoutPcts)
+      : 0
+    map.set(p.uid, { rank: p.rank, payout })
+  }
+  return map
+}
+
+/**
+ * Resolve double-dipping with cascading:
+ *
+ * 1. First pass: compute gross + net payouts for all players.
+ * 2. Identify players who place in both — they keep the higher payout.
+ * 3. Remove those players from the OTHER ranking and re-rank.
+ *    The remaining players cascade up into the vacated slots.
+ * 4. Repeat until no new double-dips appear (usually 1–2 iterations).
+ */
+function resolvePayoutsWithCascade(
+  players: PlayerMonthData[],
+  grossPool: number,
+  netPool: number,
+): { grossMap: Map<string, { rank: number; payout: number }>; netMap: Map<string, { rank: number; payout: number }> } {
+  const grossExclude = new Set<string>()
+  const netExclude = new Set<string>()
+
+  // Iterate until stable (typically 1–2 rounds)
+  for (let i = 0; i < 10; i++) {
+    const grossMap = buildPayoutMap(players, rankByGross, grossPool, GROSS_PAYOUTS, grossExclude)
+    const netMap = buildPayoutMap(players, rankByNet, netPool, NET_PAYOUTS, netExclude)
+
+    let changed = false
+    for (const p of players) {
+      const g = grossMap.get(p.uid)
+      const n = netMap.get(p.uid)
+      if (g && g.payout > 0 && n && n.payout > 0) {
+        // Double-dip: keep higher, vacate other
+        if (g.payout >= n.payout) {
+          if (!netExclude.has(p.uid)) { netExclude.add(p.uid); changed = true }
+        } else {
+          if (!grossExclude.has(p.uid)) { grossExclude.add(p.uid); changed = true }
         }
       }
     }
-    return p
-  })
+
+    if (!changed) {
+      return { grossMap, netMap }
+    }
+  }
+
+  // Fallback (shouldn't reach here)
+  return {
+    grossMap: buildPayoutMap(players, rankByGross, grossPool, GROSS_PAYOUTS, grossExclude),
+    netMap: buildPayoutMap(players, rankByNet, netPool, NET_PAYOUTS, netExclude),
+  }
 }
 
 // ─── Main calculation ───────────────────────────────────────────────────────
@@ -158,12 +252,14 @@ function resolveDoubleDip(previews: PayoutPreview[]): PayoutPreview[] {
  * @param registrations - all registrations for the season
  * @param season - the active season
  * @param month - month key e.g. "2026-05"
+ * @param isChampionship - if true, double the performance purse (Tour Championship)
  */
 export function calculateMonthPayouts(
   rounds: Round[],
   registrations: Registration[],
   season: Season,
-  month: string
+  month: string,
+  isChampionship = false
 ): MonthPayoutResult {
   // 1. Pick one round per player
   const players = pickScoringRounds(rounds)
@@ -175,36 +271,22 @@ export function calculateMonthPayouts(
   ).length
   const totalDuesCollected = paidCount * season.monthlyDue
   const poolSplit = calculateMonthlyPoolSplit(totalDuesCollected)
-  const perf = calculatePerformancePurse(poolSplit.performancePurse)
 
-  // 3. Rank players (with tie handling)
-  const grossRanked = rankByGross(players)
-  const netRanked = rankByNet(players)
+  // Tour Championship: double the performance purse
+  const effectivePurse = isChampionship
+    ? poolSplit.performancePurse * 2
+    : poolSplit.performancePurse
+  const perf = calculatePerformancePurse(effectivePurse)
 
-  // Count how many players share each rank for tie-splitting
-  function countTied(ranked: RankedPlayer[], rank: number): number {
-    return ranked.filter((p) => p.rank === rank).length
-  }
+  // 3. Resolve gross/net payouts with double-dip cascading
+  //    Also compute the "original" (pre-cascade) maps to show double-dip indicators
+  const originalGrossMap = buildPayoutMap(players, rankByGross, perf.grossPool, GROSS_PAYOUTS, new Set())
+  const originalNetMap = buildPayoutMap(players, rankByNet, perf.netPool, NET_PAYOUTS, new Set())
+  const { grossMap, netMap } = resolvePayoutsWithCascade(
+    players, perf.grossPool, perf.netPool
+  )
 
-  // 4. Build gross rank map (top 2 get paid, ties split)
-  const grossPayoutMap = new Map<string, { rank: number; payout: number }>()
-  for (const p of grossRanked) {
-    const payout = p.rank <= GROSS_PAYOUTS.length
-      ? tieSplitPayout(p.rank, countTied(grossRanked, p.rank), perf.grossPool, GROSS_PAYOUTS)
-      : 0
-    grossPayoutMap.set(p.uid, { rank: p.rank, payout })
-  }
-
-  // 5. Build net rank map (top 3 get paid, ties split)
-  const netPayoutMap = new Map<string, { rank: number; payout: number }>()
-  for (const p of netRanked) {
-    const payout = p.rank <= NET_PAYOUTS.length
-      ? tieSplitPayout(p.rank, countTied(netRanked, p.rank), perf.netPool, NET_PAYOUTS)
-      : 0
-    netPayoutMap.set(p.uid, { rank: p.rank, payout })
-  }
-
-  // 6. Calculate skill payouts
+  // 4. Calculate skill payouts
   const totalSaves = players.reduce((s, p) => s + p.sandSaves, 0)
   const totalPar3Pars = players.reduce((s, p) => s + p.par3Pars, 0)
   const perSaveValue = totalSaves > 0
@@ -214,12 +296,20 @@ export function calculateMonthPayouts(
     ? Math.round(perf.par3Pool / totalPar3Pars * 100) / 100
     : 0
 
-  // 7. Assemble previews
-  let previews: PayoutPreview[] = players.map((p) => {
-    const gross = grossPayoutMap.get(p.uid) ?? { rank: null, payout: 0 }
-    const net = netPayoutMap.get(p.uid) ?? { rank: null, payout: 0 }
+  // 5. Assemble previews
+  const previews: PayoutPreview[] = players.map((p) => {
+    const gross = grossMap.get(p.uid) ?? { rank: null, payout: 0 }
+    const net = netMap.get(p.uid) ?? { rank: null, payout: 0 }
     const savesPayout = Math.round(p.sandSaves * perSaveValue * 100) / 100
     const par3Payout = Math.round(p.par3Pars * perPar3Value * 100) / 100
+
+    // Determine double-dip resolution for display
+    let doubleDipResolution: 'gross' | 'net' | 'none' = 'none'
+    const origG = originalGrossMap.get(p.uid)
+    const origN = originalNetMap.get(p.uid)
+    if (origG && origG.payout > 0 && origN && origN.payout > 0) {
+      doubleDipResolution = origG.payout >= origN.payout ? 'gross' : 'net'
+    }
 
     return {
       uid: p.uid,
@@ -230,14 +320,11 @@ export function calculateMonthPayouts(
       savesPayout,
       par3Payout,
       totalPayout: gross.payout + net.payout + savesPayout + par3Payout,
-      doubleDipResolution: 'none' as const,
+      doubleDipResolution,
       sandSaves: p.sandSaves,
       par3Pars: p.par3Pars,
     }
   })
-
-  // 8. Resolve double-dip
-  previews = resolveDoubleDip(previews)
 
   // Sort by total payout descending for display
   previews.sort((a, b) => b.totalPayout - a.totalPayout)
@@ -246,7 +333,7 @@ export function calculateMonthPayouts(
     payouts: previews,
     totalDuesCollected,
     seasonContribution: poolSplit.seasonContribution,
-    performancePurse: poolSplit.performancePurse,
+    performancePurse: effectivePurse,
     netPool: perf.netPool,
     grossPool: perf.grossPool,
     savesPool: perf.savesPool,
@@ -256,5 +343,6 @@ export function calculateMonthPayouts(
     totalSaves,
     totalPar3Pars,
     playerCount,
+    isChampionship,
   }
 }

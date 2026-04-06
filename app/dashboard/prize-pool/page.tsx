@@ -311,6 +311,8 @@ export default function PrizePoolPage() {
             Of each month&apos;s pool, <strong>40% feeds the Season Purse</strong> and{' '}
             <strong>60% is paid out that month</strong> based on performance.
             The first month has no payout and is used to establish handicaps.
+            Players who don&apos;t submit a valid round forfeit their dues &mdash;{' '}
+            <strong>half goes to this month&apos;s pool</strong>, half rolls to next month.
           </InfoCallout>
 
           {/* Month selector */}
