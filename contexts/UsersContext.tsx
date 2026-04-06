@@ -1,8 +1,8 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from './AuthContext'
-import { getAllUsers } from '@/lib/firebase/firestore'
+import { subscribeToUsers } from '@/lib/firebase/firestore'
 import type { UserProfile } from '@/lib/types'
 
 interface UsersContextValue {
@@ -24,17 +24,34 @@ export function UsersProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    getAllUsers()
-      .then(setUsers)
-      .catch((err) => console.warn('Failed to load users:', err))
-      .finally(() => setLoading(false))
+    const unsub = subscribeToUsers((data) => {
+      setUsers(data)
+      setLoading(false)
+    })
+    return unsub
   }, [user, isDemo])
 
-  const getUserName = (uid: string) =>
-    users.find((u) => u.uid === uid)?.displayName ?? uid.slice(0, 8)
+  // Build a uid → displayName lookup map so getUserName is O(1)
+  const nameMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const u of users) {
+      map.set(u.uid, u.displayName)
+    }
+    return map
+  }, [users])
+
+  const getUserName = useCallback(
+    (uid: string) => nameMap.get(uid) ?? uid.slice(0, 8),
+    [nameMap]
+  )
+
+  const value = useMemo(
+    () => ({ users, loading, getUserName }),
+    [users, loading, getUserName]
+  )
 
   return (
-    <UsersContext.Provider value={{ users, loading, getUserName }}>
+    <UsersContext.Provider value={value}>
       {children}
     </UsersContext.Provider>
   )

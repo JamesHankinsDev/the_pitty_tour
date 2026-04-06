@@ -132,10 +132,44 @@ export function subscribeToUserProfile(
   })
 }
 
+// Module-level cache for getAllUsers — avoids re-reading the entire
+// collection on every admin page navigation.
+let _usersCache: UserProfile[] | null = null
+let _usersCacheTime = 0
+const USERS_CACHE_TTL = 5 * 60_000 // 5 minutes
+
 export async function getAllUsers(): Promise<UserProfile[]> {
+  if (_usersCache && Date.now() - _usersCacheTime < USERS_CACHE_TTL) {
+    return _usersCache
+  }
   const q = query(collection(db, COLLECTIONS.USERS), orderBy('displayName'))
   const snap = await getDocs(q)
-  return snap.docs.map((d) => d.data() as UserProfile)
+  _usersCache = snap.docs.map((d) => d.data() as UserProfile)
+  _usersCacheTime = Date.now()
+  return _usersCache
+}
+
+/**
+ * Real-time subscription to the users collection.
+ * Used by UsersContext so new players appear automatically.
+ */
+export function subscribeToUsers(
+  callback: (users: UserProfile[]) => void
+) {
+  const q = query(
+    collection(db, COLLECTIONS.USERS),
+    orderBy('displayName')
+  )
+  return onSnapshot(q, (snap) => {
+    const users = snap.docs.map((d) => d.data() as UserProfile)
+    // Keep module cache in sync with the real-time data
+    _usersCache = users
+    _usersCacheTime = Date.now()
+    callback(users)
+  }, (err) => {
+    console.warn('Users subscription error:', err.message)
+    callback([])
+  })
 }
 
 export async function getUserByUid(uid: string): Promise<UserProfile | null> {
