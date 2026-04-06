@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
 import { usePlayerRounds } from '@/lib/hooks/useRounds'
@@ -89,17 +89,27 @@ export default function DashboardPage() {
     return unsub
   }, [isDemo])
 
-  const currentMonthRounds = rounds.filter((r) => r.month === currentMonth)
-  const hasValidRoundThisMonth = currentMonthRounds.some((r) => r.isValid)
-  const pendingRounds = rounds.filter((r) => !r.isValid && r.attestations.length < 1)
+  const { currentMonthRounds, hasValidRoundThisMonth, pendingRounds, validRounds, bestGross, avgNet } =
+    useMemo(() => {
+      const cmr = rounds.filter((r) => r.month === currentMonth)
+      const valid = rounds.filter((r) => r.isValid)
+      const pending = rounds.filter((r) => !r.isValid && r.attestations.length < 1)
+      return {
+        currentMonthRounds: cmr,
+        hasValidRoundThisMonth: cmr.some((r) => r.isValid),
+        pendingRounds: pending,
+        validRounds: valid,
+        bestGross: valid.length ? Math.min(...valid.map((r) => r.grossScore)) : null,
+        avgNet: valid.length
+          ? Math.round(valid.reduce((s, r) => s + r.netScore, 0) / valid.length)
+          : null,
+      }
+    }, [rounds, currentMonth])
 
-  const validRounds = rounds.filter((r) => r.isValid)
-  const bestGross = validRounds.length
-    ? Math.min(...validRounds.map((r) => r.grossScore))
-    : null
-  const avgNet = validRounds.length
-    ? Math.round(validRounds.reduce((s, r) => s + r.netScore, 0) / validRounds.length)
-    : null
+  const pinnedAnnouncements = useMemo(
+    () => announcements.filter((a) => a.pinned).slice(0, 2),
+    [announcements]
+  )
 
   if (seasonLoading || roundsLoading) {
     return (
@@ -127,7 +137,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Pinned Announcements */}
-      {announcements.filter((a) => a.pinned).slice(0, 2).map((a) => (
+      {pinnedAnnouncements.map((a) => (
         <Card key={a.id} className="border-yellow-300 bg-yellow-50">
           <CardContent className="p-3 flex gap-3">
             <Megaphone className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />

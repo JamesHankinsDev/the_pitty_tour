@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
 import { getAllUsers, getSeasonRegistrations, getSeasonRounds, subscribeToFlaggedRounds, dismissFlag } from '@/lib/firebase/firestore'
 import { getCurrentMonthKey, formatMonthKey, daysRemainingInMonth } from '@/lib/utils/dates'
@@ -95,11 +95,14 @@ export default function AdminOverview() {
   const currentMonth = getCurrentMonthKey()
   const daysLeft = daysRemainingInMonth()
 
-  const validRounds = rounds.filter((r) => r.isValid)
-  const pendingRounds = rounds.filter((r) => !r.isValid)
-  const thisMonthRounds = rounds.filter((r) => r.month === currentMonth)
-  const paidRegs = regs.filter((r) => r.hasPaidRegistration)
-  const totalForfeits = regs.reduce((s, r) => s + r.totalForfeited, 0)
+  const { validRounds, pendingRounds, thisMonthRounds, paidRegs, totalForfeits } =
+    useMemo(() => ({
+      validRounds: rounds.filter((r) => r.isValid),
+      pendingRounds: rounds.filter((r) => !r.isValid),
+      thisMonthRounds: rounds.filter((r) => r.month === currentMonth),
+      paidRegs: regs.filter((r) => r.hasPaidRegistration),
+      totalForfeits: regs.reduce((s, r) => s + r.totalForfeited, 0),
+    }), [rounds, regs, currentMonth])
 
   if (loading || seasonLoading) {
     return (

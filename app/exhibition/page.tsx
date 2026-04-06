@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserExhibitionSessions } from '@/lib/firebase/firestore'
 import { Card, CardContent } from '@/components/ui/card'
@@ -27,11 +27,13 @@ export default function ExhibitionListPage() {
       .finally(() => setLoading(false))
   }, [user])
 
-  const lobby = sessions.filter((s) => s.status === 'lobby')
-  const active = sessions.filter((s) => s.status === 'active')
-  const completed = sessions.filter((s) => s.status === 'completed')
-    .sort((a, b) => ((b.completedAt as any)?.seconds ?? 0) - ((a.completedAt as any)?.seconds ?? 0))
-    .slice(0, 10)
+  const { lobby, active, completed } = useMemo(() => ({
+    lobby: sessions.filter((s) => s.status === 'lobby'),
+    active: sessions.filter((s) => s.status === 'active'),
+    completed: sessions.filter((s) => s.status === 'completed')
+      .sort((a, b) => ((b.completedAt as any)?.seconds ?? 0) - ((a.completedAt as any)?.seconds ?? 0))
+      .slice(0, 10),
+  }), [sessions])
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useActiveSeason } from '@/lib/hooks/useSeason'
 import { getSeasonRegistrations } from '@/lib/firebase/firestore'
 import {
@@ -143,28 +143,42 @@ export default function PrizePoolPage() {
 
   // ── Calculations ──────────────────────────────────────────────────────────
 
-  const playerCount = registrations.length
-  const paidRegs = registrations.filter((r) => r.hasPaidRegistration)
-  const totalForfeits = registrations.reduce((s, r) => s + r.totalForfeited, 0)
-  const seasonMonths = getSeasonMonths(season.year, season.startMonth, season.endMonth)
-  const totalSeasonMonths = seasonMonths.length
-  // First month has no payout (used to establish handicaps)
-  const payoutMonths = totalSeasonMonths - 1
+  const {
+    playerCount, paidRegs, totalForfeits, seasonMonths, totalSeasonMonths,
+    payoutMonths, monthlyDuesCollected, poolSplit, perfPurse, netPayouts,
+    grossPayouts, estimatedMonthlyContributions, estimatedSeasonPurse,
+    registrationFeePool, seasonBreakdown, seasonTop3, seasonBonuses,
+  } = useMemo(() => {
+    const pc = registrations.length
+    const paid = registrations.filter((r) => r.hasPaidRegistration)
+    const forfeits = registrations.reduce((s, r) => s + r.totalForfeited, 0)
+    const months = getSeasonMonths(season!.year, season!.startMonth, season!.endMonth)
+    const totalMonths = months.length
+    const pMonths = totalMonths - 1
 
-  // Monthly pool example for selected month
-  const monthlyDuesCollected = playerCount * season.monthlyDue
-  const poolSplit = calculateMonthlyPoolSplit(monthlyDuesCollected)
-  const perfPurse = calculatePerformancePurse(poolSplit.performancePurse)
-  const netPayouts = calculateNetPayouts(perfPurse.netPool)
-  const grossPayouts = calculateGrossPayouts(perfPurse.grossPool)
+    const duesCollected = pc * season!.monthlyDue
+    const split = calculateMonthlyPoolSplit(duesCollected)
+    const perf = calculatePerformancePurse(split.performancePurse)
+    const net = calculateNetPayouts(perf.netPool)
+    const gross = calculateGrossPayouts(perf.grossPool)
 
-  // Season purse estimate
-  const estimatedMonthlyContributions = poolSplit.seasonContribution * totalSeasonMonths
-  const registrationFeePool = paidRegs.length * season.registrationFee
-  const estimatedSeasonPurse = estimatedMonthlyContributions + registrationFeePool
-  const seasonBreakdown = calculateSeasonPurse(estimatedSeasonPurse)
-  const seasonTop3 = calculateSeasonTop3(seasonBreakdown.top3Pool)
-  const seasonBonuses = calculateSeasonBonuses(seasonBreakdown.bonusPool)
+    const monthlyContrib = split.seasonContribution * totalMonths
+    const regFeePool = paid.length * season!.registrationFee
+    const estPurse = monthlyContrib + regFeePool
+    const sBrk = calculateSeasonPurse(estPurse)
+    const sTop3 = calculateSeasonTop3(sBrk.top3Pool)
+    const sBonuses = calculateSeasonBonuses(sBrk.bonusPool)
+
+    return {
+      playerCount: pc, paidRegs: paid, totalForfeits: forfeits,
+      seasonMonths: months, totalSeasonMonths: totalMonths, payoutMonths: pMonths,
+      monthlyDuesCollected: duesCollected, poolSplit: split, perfPurse: perf,
+      netPayouts: net, grossPayouts: gross,
+      estimatedMonthlyContributions: monthlyContrib,
+      estimatedSeasonPurse: estPurse, registrationFeePool: regFeePool,
+      seasonBreakdown: sBrk, seasonTop3: sTop3, seasonBonuses: sBonuses,
+    }
+  }, [registrations, season])
 
   // Tour Championship = double purse (first month's contribution rolls into last month)
   const championshipPurse = poolSplit.performancePurse * 2
