@@ -13,7 +13,9 @@ import {
   nominateCandidate,
   respondToNomination,
   castElectionVote,
+  createNotification,
 } from '@/lib/firebase/firestore'
+import { sendPush } from '@/lib/firebase/push'
 import { ElectionPhaseBanner } from '@/components/elections/ElectionPhaseBanner'
 import { CandidateCard } from '@/components/elections/CandidateCard'
 import { RoleBadge } from '@/components/elections/RoleBadge'
@@ -114,7 +116,7 @@ export default function ElectionDetailPage() {
 
   // Nominate handler
   const handleNominate = async () => {
-    if (!nomineeUid || !user) return
+    if (!nomineeUid || !user || !profile || !election) return
     const alreadyNominated = candidates.some((c) => c.userId === nomineeUid)
     if (alreadyNominated) { toast.error('This member has already been nominated'); return }
     setNominating(true)
@@ -122,6 +124,28 @@ export default function ElectionDetailPage() {
       await nominateCandidate(pollId, nomineeUid, user.uid)
       setNomineeUid('')
       toast.success('Nomination submitted!')
+
+      // Notify the nominee (skip if self-nomination)
+      if (nomineeUid !== user.uid) {
+        const title = `You've been nominated for ${election.officeTitle}`
+        const body = `${profile.displayName} nominated you. Accept or decline on the election page.`
+        createNotification({
+          recipientUid: nomineeUid,
+          type: 'admin',
+          title,
+          body,
+          link: `/dashboard/elections/${pollId}`,
+          actorUid: user.uid,
+          actorName: profile.displayName,
+          actorPhotoURL: profile.photoURL,
+        }).catch(() => {})
+        sendPush({
+          recipientUids: [nomineeUid],
+          title,
+          body,
+          link: `/dashboard/elections/${pollId}`,
+        })
+      }
     } catch {
       toast.error('Failed to nominate.')
     } finally {
@@ -259,14 +283,13 @@ export default function ElectionDetailPage() {
             </Card>
           )}
 
-          {/* Admin nomination */}
-          {profile?.isAdmin && (
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                  <UserPlus className="w-4 h-4" />
-                  Nominate a Member (Admin)
-                </h3>
+          {/* Nominate another member */}
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                Nominate a Member
+              </h3>
                 <div className="flex gap-2">
                   <Select value={nomineeUid} onValueChange={setNomineeUid}>
                     <SelectTrigger className="flex-1">
@@ -286,7 +309,6 @@ export default function ElectionDetailPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
         </>
       )}
 
