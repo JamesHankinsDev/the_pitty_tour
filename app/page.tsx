@@ -464,7 +464,16 @@ export default function LandingPage() {
       </div>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-white/10 py-8 text-center text-green-400 text-sm">
+      <footer className="border-t border-white/10 py-8 text-center text-green-400 text-sm space-y-3">
+        <a
+          href="https://www.buymeacoffee.com/TheUnOfficialJB"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold rounded-full text-sm transition-colors"
+        >
+          <span>&#9749;</span>
+          Buy me a coffee
+        </a>
         <p>
           &copy; {new Date().getFullYear()} PITY Tour &middot; All rights
           reserved

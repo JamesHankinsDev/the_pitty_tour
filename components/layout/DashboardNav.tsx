@@ -252,6 +252,15 @@ export function DashboardNav() {
           </div>
         </div>
 
+        <a
+          href="https://www.buymeacoffee.com/TheUnOfficialJB"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full px-3 py-1.5 mb-2 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-semibold rounded-md text-xs transition-colors"
+        >
+          <span>&#9749;</span>
+          Buy me a coffee
+        </a>
         <Button variant="outline" size="sm" className="w-full" onClick={logOut}>
           <LogOut className="w-4 h-4 mr-2" />
           {isDemo ? 'Exit Demo' : 'Sign Out'}
