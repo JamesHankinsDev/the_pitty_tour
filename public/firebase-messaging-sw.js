@@ -14,9 +14,12 @@ firebase.initializeApp({
 const messaging = firebase.messaging()
 
 /* ─── PWA caching ────────────────────────────────────────────────────────── */
-const CACHE_VERSION = 'pity-v1'
+// Bump this version on each deploy to evict stale caches.
+// Format: pity-vN (increment N when shipping breaking changes).
+const CACHE_VERSION = 'pity-v2'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
+const RUNTIME_MAX_AGE = 24 * 60 * 60 * 1000 // 24h — runtime cache entries expire after this
 
 // Take over as soon as updated
 self.addEventListener('install', (event) => {
@@ -85,7 +88,7 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Other same-origin GETs — stale-while-revalidate with size cap
+  // Other same-origin GETs — stale-while-revalidate with size + age cap
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetchPromise = fetch(request)
@@ -95,8 +98,9 @@ self.addEventListener('fetch', (event) => {
             cache.put(request, copy)
             // Evict oldest entries if cache grows too large
             cache.keys().then((keys) => {
-              if (keys.length > 100) {
-                cache.delete(keys[0])
+              const excess = keys.length - 100
+              for (let i = 0; i < excess; i++) {
+                cache.delete(keys[i])
               }
             })
           })

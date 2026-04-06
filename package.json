@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node -e \"const f=require('fs');const sw=f.readFileSync('public/firebase-messaging-sw.js','utf8');const v='pity-'+Date.now();f.writeFileSync('public/firebase-messaging-sw.js',sw.replace(/CACHE_VERSION = '[^']+'/,'CACHE_VERSION = \\''+v+'\\''));console.log('SW cache version:',v)\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

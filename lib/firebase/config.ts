@@ -1,3 +1,4 @@
+import '@/lib/env' // validate client env vars on startup
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
