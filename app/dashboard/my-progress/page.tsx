@@ -21,16 +21,16 @@ const MIN_UNIQUE_MARKERS = 4
 const POINTS_PER_MARKER = 5
 
 const tierColors = {
-  bronze: 'border-orange-300 bg-orange-50',
-  silver: 'border-gray-300 bg-gray-50',
-  gold: 'border-yellow-300 bg-yellow-50',
-  platinum: 'border-purple-300 bg-purple-50',
+  bronze: 'border-orange-300 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/20',
+  silver: 'border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/30',
+  gold: 'border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20',
+  platinum: 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/20',
 }
 const tierBadgeColors = {
-  bronze: 'bg-orange-100 text-orange-700',
-  silver: 'bg-gray-200 text-gray-700',
-  gold: 'bg-yellow-100 text-yellow-700',
-  platinum: 'bg-purple-100 text-purple-700',
+  bronze: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-400',
+  silver: 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  gold: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-400',
+  platinum: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-400',
 }
 
 export default function MyProgressPage() {
@@ -112,7 +112,7 @@ export default function MyProgressPage() {
       <div className="grid grid-cols-3 gap-3">
         <Card>
           <CardContent className="p-3 text-center">
-            <p className="text-2xl font-black text-green-700">{earnedBadges.length}</p>
+            <p className="text-2xl font-black text-green-700 dark:text-green-400">{earnedBadges.length}</p>
             <p className="text-xs text-muted-foreground">Badges</p>
           </CardContent>
         </Card>
@@ -124,7 +124,7 @@ export default function MyProgressPage() {
         </Card>
         <Card>
           <CardContent className="p-3 text-center">
-            <p className="text-2xl font-black text-yellow-600">+{bonusPoints}</p>
+            <p className="text-2xl font-black text-yellow-600 dark:text-yellow-400">+{bonusPoints}</p>
             <p className="text-xs text-muted-foreground">Marker Pts</p>
           </CardContent>
         </Card>
@@ -169,7 +169,7 @@ export default function MyProgressPage() {
                   <div className="text-2xl mb-1">{b.emoji}</div>
                   <p className="font-bold text-xs">{b.name}</p>
                   <p className="text-xs text-muted-foreground">{b.description}</p>
-                  <p className="text-xs text-green-700 mt-1">{b.earned ? b.detail : ''}</p>
+                  <p className="text-xs text-green-700 dark:text-green-400 mt-1">{b.earned ? b.detail : ''}</p>
                 </div>
               ))}
             </div>
@@ -196,21 +196,21 @@ export default function MyProgressPage() {
         {/* Passport tab */}
         <TabsContent value="passport" className="mt-4 space-y-4">
           {/* Progress */}
-          <Card className={meetsRequirement ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'}>
+          <Card className={meetsRequirement ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' : 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20'}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-2xl font-black">{uniqueMarkers}<span className="text-lg font-normal text-muted-foreground">/{MIN_UNIQUE_MARKERS}</span></p>
                   <p className="text-sm text-muted-foreground">Unique Markers</p>
                 </div>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetsRequirement ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetsRequirement ? 'bg-green-100 dark:bg-green-900' : 'bg-yellow-100 dark:bg-yellow-900'}`}>
                   {meetsRequirement ? <CheckCircle2 className="w-6 h-6 text-green-600" /> : <Target className="w-6 h-6 text-yellow-600" />}
                 </div>
               </div>
-              <div className="w-full bg-white/60 rounded-full h-2.5">
+              <div className="w-full bg-muted rounded-full h-2.5">
                 <div className={`h-2.5 rounded-full ${meetsRequirement ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${Math.min((uniqueMarkers / MIN_UNIQUE_MARKERS) * 100, 100)}%` }} />
               </div>
-              <p className={`text-xs mt-2 font-medium ${meetsRequirement ? 'text-green-800' : 'text-yellow-800'}`}>
+              <p className={`text-xs mt-2 font-medium ${meetsRequirement ? 'text-green-800 dark:text-green-400' : 'text-yellow-800 dark:text-yellow-400'}`}>
                 {meetsRequirement ? 'Requirement met!' : `${MIN_UNIQUE_MARKERS - uniqueMarkers} more needed`}
               </p>
             </CardContent>
@@ -226,7 +226,7 @@ export default function MyProgressPage() {
                   <p className="text-xs text-muted-foreground">{POINTS_PER_MARKER} pts per marker</p>
                 </div>
               </div>
-              <p className="text-xl font-black text-green-700">+{bonusPoints}</p>
+              <p className="text-xl font-black text-green-700 dark:text-green-400">+{bonusPoints}</p>
             </CardContent>
           </Card>
 
@@ -239,7 +239,7 @@ export default function MyProgressPage() {
           ) : (
             <div className="space-y-2">
               {markers.map((m, i) => (
-                <div key={m.uid} className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-100">
+                <div key={m.uid} className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-100 dark:bg-green-900/20 dark:border-green-800">
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-green-600 text-white">{i + 1}</div>
                   <Avatar className="w-8 h-8 shrink-0">
                     <AvatarImage src={m.photoURL} />

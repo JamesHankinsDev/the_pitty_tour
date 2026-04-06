@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils/cn'
 import { usePlayerStats } from '@/lib/hooks/usePlayerStats'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import {
   LayoutDashboard,
   Flag,
@@ -117,10 +118,11 @@ export function MobileNav() {
           <div className="w-7 h-7 bg-green-600 rounded-md flex items-center justify-center">
             <span className="text-white font-black text-xs">P</span>
           </div>
-          <span className="font-bold text-green-700">PITY Tour</span>
+          <span className="font-bold text-green-700 dark:text-green-400">PITY Tour</span>
         </Link>
 
         <div className="flex items-center gap-1">
+          <ThemeToggle />
           <NotificationBell />
           <div className="relative">
             <Avatar className="w-7 h-7">
@@ -147,7 +149,7 @@ export function MobileNav() {
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 bg-background flex flex-col">
           <div className="flex items-center justify-between px-4 h-14 border-b">
-            <span className="font-bold text-green-700">Menu</span>
+            <span className="font-bold text-green-700 dark:text-green-400">Menu</span>
             <button onClick={() => setMenuOpen(false)} className="p-2 -mr-2" aria-label="Close menu">
               <X className="w-5 h-5" />
             </button>
@@ -186,7 +188,7 @@ export function MobileNav() {
                       className={cn(
                         'flex items-center gap-3 px-4 py-2.5 rounded-lg text-base font-medium',
                         isActive
-                          ? 'bg-green-50 text-green-700'
+                          ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300'
                           : 'text-foreground hover:bg-accent'
                       )}
                     >
@@ -210,7 +212,7 @@ export function MobileNav() {
                   className={cn(
                     'flex items-center gap-3 px-4 py-2.5 rounded-lg text-base font-medium',
                     pathname.startsWith('/admin')
-                      ? 'bg-green-50 text-green-700'
+                      ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300'
                       : 'text-foreground hover:bg-accent'
                   )}
                 >
@@ -250,13 +252,13 @@ export function MobileNav() {
               </div>
               <div className="text-center border-x border-border">
                 <p className="text-xs text-muted-foreground">Points</p>
-                <p className="text-sm font-bold text-green-700">
+                <p className="text-sm font-bold text-green-700 dark:text-green-400">
                   {totalPoints}
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">Earned</p>
-                <p className="text-sm font-bold text-green-700">
+                <p className="text-sm font-bold text-green-700 dark:text-green-400">
                   ${totalEarnings}
                 </p>
               </div>
@@ -292,13 +294,13 @@ export function MobileNav() {
                 href={tab.href}
                 className={cn(
                   'flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs',
-                  isActive ? 'text-green-700' : 'text-muted-foreground'
+                  isActive ? 'text-green-700 dark:text-green-400' : 'text-muted-foreground'
                 )}
               >
                 <Icon
                   className={cn(
                     'w-5 h-5',
-                    isActive ? 'text-green-600' : 'text-muted-foreground'
+                    isActive ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
                   )}
                 />
                 <span className="truncate">{tab.label}</span>

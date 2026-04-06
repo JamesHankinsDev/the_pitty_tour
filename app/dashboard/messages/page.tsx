@@ -92,7 +92,7 @@ function renderWithMentions(
         className={`font-semibold rounded px-1 ${
           ownBubble
             ? 'bg-white/20 text-white'
-            : 'bg-green-100 text-green-800'
+            : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
         }`}
       >
         {match[0]}
@@ -147,7 +147,7 @@ function MessageBubble({
       </Avatar>
       <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
         <div className="flex items-center gap-2 mb-0.5">
-          <span className={`text-xs font-medium ${isOwn ? 'text-green-700' : 'text-muted-foreground'}`}>
+          <span className={`text-xs font-medium ${isOwn ? 'text-green-700 dark:text-green-400' : 'text-muted-foreground'}`}>
             {isOwn ? 'You' : msg.displayName}
           </span>
           <span className="text-xs text-muted-foreground">
@@ -158,7 +158,7 @@ function MessageBubble({
           <div
             className={`rounded-2xl px-3.5 py-2 text-sm ${
               msg.type === 'lfg'
-                ? 'bg-yellow-50 border border-yellow-200 text-yellow-900'
+                ? 'bg-yellow-50 border border-yellow-200 text-yellow-900 dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-200'
                 : isOwn
                 ? 'bg-green-600 text-white'
                 : 'bg-muted text-foreground'
@@ -229,7 +229,7 @@ function MessageBubble({
                   disabled={!currentUid}
                   className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-xs transition-colors ${
                     mine
-                      ? 'bg-green-50 border-green-300 text-green-800'
+                      ? 'bg-green-50 border-green-300 text-green-800 dark:bg-green-900/50 dark:border-green-700 dark:text-green-300'
                       : 'bg-background border-border text-muted-foreground hover:bg-accent'
                   }`}
                 >
@@ -272,7 +272,7 @@ function LFGPanel({
   }, [profile?.lookingForPartner])
 
   return (
-    <Card className={isLooking ? 'border-yellow-300 bg-yellow-50' : ''}>
+    <Card className={isLooking ? 'border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20' : ''}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
           <Users className="w-4 h-4 text-yellow-600" />
@@ -328,7 +328,7 @@ function LFGPanel({
             {lfgPlayers.map((p) => (
               <div
                 key={p.uid}
-                className="flex items-center gap-2.5 p-2 bg-white rounded-lg border"
+                className="flex items-center gap-2.5 p-2 bg-background rounded-lg border"
               >
                 <Avatar className="w-7 h-7">
                   <AvatarImage src={p.photoURL} />

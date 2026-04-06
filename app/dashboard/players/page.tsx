@@ -73,7 +73,7 @@ export default function PlayersPage() {
             return (
               <Card
                 key={player.uid}
-                className={isYou ? 'border-green-200 bg-green-50/50' : ''}
+                className={isYou ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/30' : ''}
               >
                 <CardContent className="p-4 flex items-center gap-3">
                   <Avatar className="w-10 h-10 shrink-0">

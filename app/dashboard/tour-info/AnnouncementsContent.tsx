@@ -73,7 +73,7 @@ export default function AnnouncementsContent() {
       )}
 
       {showForm && canPost && (
-        <Card className="border-green-200 bg-green-50/50">
+        <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/20">
           <CardContent className="p-4 space-y-3">
             <div className="space-y-2">
               <Label>Title</Label>
@@ -104,7 +104,7 @@ export default function AnnouncementsContent() {
         </div>
       ) : (
         sorted.map((a) => (
-          <Card key={a.id} className={a.pinned ? 'border-yellow-300 bg-yellow-50' : ''}>
+          <Card key={a.id} className={a.pinned ? 'border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20' : ''}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">

@@ -242,7 +242,7 @@ export default function CalendarPage() {
 
       {/* Schedule form */}
       {showScheduleForm && (
-        <Card className="border-green-200 bg-green-50/50">
+        <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/20">
           <CardContent className="p-4 space-y-3">
             <p className="font-semibold text-sm">Schedule a Round</p>
             <div className="grid grid-cols-2 gap-3">
@@ -317,7 +317,7 @@ export default function CalendarPage() {
               const dateObj = new Date(sr.date + 'T12:00:00')
 
               return (
-                <Card key={sr.id} className={isMember ? 'border-green-200 bg-green-50/50' : ''}>
+                <Card key={sr.id} className={isMember ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/20' : ''}>
                   <CardContent className="p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
@@ -430,11 +430,11 @@ export default function CalendarPage() {
                     relative min-h-[48px] p-1 text-sm transition-colors bg-background
                     ${!inMonth ? 'text-muted-foreground/30' : ''}
                     ${today ? 'ring-2 ring-green-500 ring-inset' : ''}
-                    ${isSelected ? 'bg-green-50' : 'hover:bg-accent'}
-                    ${isDeadline && inMonth ? 'bg-red-50' : ''}
+                    ${isSelected ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-accent'}
+                    ${isDeadline && inMonth ? 'bg-red-50 dark:bg-red-900/20' : ''}
                   `}
                 >
-                  <span className={`text-xs font-medium ${today ? 'text-green-700 font-bold' : ''} ${isDeadline && inMonth ? 'text-red-600 font-bold' : ''}`}>
+                  <span className={`text-xs font-medium ${today ? 'text-green-700 dark:text-green-400 font-bold' : ''} ${isDeadline && inMonth ? 'text-red-600 dark:text-red-400 font-bold' : ''}`}>
                     {format(day, 'd')}
                   </span>
                   <div className="flex gap-0.5 mt-0.5 justify-center">
@@ -481,7 +481,7 @@ export default function CalendarPage() {
                   const isMember = sr.players.includes(uid)
                   const spotsLeft = sr.spots - sr.players.length
                   return (
-                    <div key={sr.id} className="flex items-center justify-between p-2.5 bg-blue-50 rounded-lg border border-blue-100">
+                    <div key={sr.id} className="flex items-center justify-between p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{sr.courseName} at {sr.teeTime}</p>
                         <p className="text-xs text-muted-foreground">
@@ -509,7 +509,7 @@ export default function CalendarPage() {
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Submitted Rounds</p>
                 {selectedDayRounds.map((round) => (
-                  <div key={round.id} className={`flex items-center gap-3 p-2.5 rounded-lg border ${round.isValid ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'}`}>
+                  <div key={round.id} className={`flex items-center gap-3 p-2.5 rounded-lg border ${round.isValid ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' : 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20'}`}>
                     <Flag className={`w-4 h-4 shrink-0 ${round.isValid ? 'text-green-600' : 'text-yellow-600'}`} />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{round.courseName}</p>
@@ -577,9 +577,9 @@ export default function CalendarPage() {
                     setViewDate(new Date(y, m - 1, 1))
                     setSelectedDay(null)
                   }}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-colors ${isCurrent ? 'bg-green-50 border border-green-200' : 'hover:bg-accent'} ${viewMonthKey === monthKey ? 'ring-2 ring-green-500' : ''}`}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-colors ${isCurrent ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800' : 'hover:bg-accent'} ${viewMonthKey === monthKey ? 'ring-2 ring-green-500' : ''}`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${closed ? 'bg-green-100 text-green-700' : isCurrent ? 'bg-green-600 text-white' : isPastMonth ? 'bg-yellow-100 text-yellow-700' : 'bg-muted text-muted-foreground'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${closed ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-400' : isCurrent ? 'bg-green-600 text-white' : isPastMonth ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-400' : 'bg-muted text-muted-foreground'}`}>
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">

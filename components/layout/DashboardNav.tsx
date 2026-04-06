@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils/cn";
 import { usePlayerStats } from "@/lib/hooks/usePlayerStats";
+import { ThemeToggleLabeled } from "@/components/theme/ThemeToggle";
 import {
   LayoutDashboard,
   User,
@@ -94,7 +95,7 @@ export function DashboardNav() {
             <span className="text-white font-black text-sm">P</span>
           </div>
           <div>
-            <p className="font-bold text-sm leading-none text-green-700">
+            <p className="font-bold text-sm leading-none text-green-700 dark:text-green-400">
               PITY Tour
             </p>
             <p className="text-xs text-muted-foreground">Golf League</p>
@@ -129,7 +130,7 @@ export function DashboardNav() {
                     className={cn(
                       "flex items-center gap-3 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-green-50 text-green-700 font-semibold"
+                        ? "bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold"
                         : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                     )}
                   >
@@ -150,7 +151,7 @@ export function DashboardNav() {
                 className={cn(
                   "flex items-center gap-3 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                   pathname === "/dashboard/handicap-review"
-                    ? "bg-green-50 text-green-700 font-semibold"
+                    ? "bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
               >
@@ -195,7 +196,7 @@ export function DashboardNav() {
                   className={cn(
                     "flex items-center gap-3 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-green-50 text-green-700 font-semibold"
+                      ? "bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                 >
@@ -240,18 +241,19 @@ export function DashboardNav() {
           </div>
           <div className="text-center border-x border-border">
             <p className="text-xs text-muted-foreground">Points</p>
-            <p className="text-sm font-bold text-green-700">
+            <p className="text-sm font-bold text-green-700 dark:text-green-400">
               {totalPoints}
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Earned</p>
-            <p className="text-sm font-bold text-green-700">
+            <p className="text-sm font-bold text-green-700 dark:text-green-400">
               ${totalEarnings}
             </p>
           </div>
         </div>
 
+        <ThemeToggleLabeled className="mb-1" />
         <a
           href="https://www.buymeacoffee.com/TheUnOfficialJB"
           target="_blank"

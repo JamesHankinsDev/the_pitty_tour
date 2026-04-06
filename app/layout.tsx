@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { Toaster } from 'sonner'
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister'
 import { IOSInstallBanner } from '@/components/pwa/IOSInstallBanner'
@@ -49,14 +50,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <AuthProvider>
-          {children}
-          <Toaster position="top-center" richColors closeButton />
-          <ServiceWorkerRegister />
-          <IOSInstallBanner />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            {children}
+            <Toaster position="top-center" richColors closeButton />
+            <ServiceWorkerRegister />
+            <IOSInstallBanner />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -20,15 +20,15 @@ interface OfficeDef {
 }
 
 const OFFICES: OfficeDef[] = [
-  { officeKey: 'commissioner', officeTitle: 'Commissioner', icon: Crown, color: 'text-yellow-700 bg-yellow-50 border-yellow-200',
+  { officeKey: 'commissioner', officeTitle: 'Commissioner', icon: Crown, color: 'text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-800',
     description: 'League president. Makes final calls on escalated rules disputes and serves as the public face of the PITY Tour.' },
-  { officeKey: 'secretary', officeTitle: 'Secretary', icon: BookOpen, color: 'text-purple-700 bg-purple-50 border-purple-200',
+  { officeKey: 'secretary', officeTitle: 'Secretary', icon: BookOpen, color: 'text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-900/20 dark:border-purple-800',
     description: 'Handles official league communications and manages the announcement board.' },
-  { officeKey: 'treasurer', officeTitle: 'Treasurer', icon: Scale, color: 'text-blue-700 bg-blue-50 border-blue-200',
+  { officeKey: 'treasurer', officeTitle: 'Treasurer', icon: Scale, color: 'text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-900/20 dark:border-blue-800',
     description: 'Manages league finances. Tracks dues collection, forfeit payments, and prize pool balance.' },
-  { officeKey: 'master_at_arms', officeTitle: 'Master at Arms', icon: Shield, color: 'text-red-700 bg-red-50 border-red-200',
+  { officeKey: 'master_at_arms', officeTitle: 'Master at Arms', icon: Shield, color: 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-900/20 dark:border-red-800',
     description: 'Rules head and integrity officer. Investigates score disputes and reviews flagged attestations.' },
-  { officeKey: 'handicap_chair', officeTitle: 'Handicap Chair', icon: Target, color: 'text-green-700 bg-green-50 border-green-200',
+  { officeKey: 'handicap_chair', officeTitle: 'Handicap Chair', icon: Target, color: 'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-900/20 dark:border-green-800',
     description: 'Oversees handicap integrity. Reviews scoring trends and certifies handicaps before major events.' },
 ]
 
@@ -68,7 +68,7 @@ export default function OfficersContent() {
                 </div>
               </div>
               {isFilled && holder ? (
-                <div className="flex items-center gap-2.5 p-2.5 bg-white/80 rounded-lg border">
+                <div className="flex items-center gap-2.5 p-2.5 bg-background/80 rounded-lg border">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={holder.photoURL} />
                     <AvatarFallback>{holder.displayName[0]}</AvatarFallback>
