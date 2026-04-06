@@ -10,7 +10,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Vote } from 'lucide-react'
 import type { Poll, PollVote, Election } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function VotingPage() {
   const { user, isDemo } = useAuth()

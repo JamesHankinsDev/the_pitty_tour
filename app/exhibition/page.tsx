@@ -12,7 +12,6 @@ import { Sparkles, Plus, Flag, Users, Search, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import type { ExhibitionSession } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function ExhibitionListPage() {
   const { user } = useAuth()

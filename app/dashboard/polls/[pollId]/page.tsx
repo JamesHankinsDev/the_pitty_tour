@@ -14,7 +14,8 @@ import {
 } from '@/lib/firebase/firestore'
 import { CountdownTimer } from '@/components/polls/CountdownTimer'
 import { PollOptionCard } from '@/components/polls/PollOptionCard'
-import { PollCommentThread } from '@/components/polls/PollCommentThread'
+import dynamic from 'next/dynamic'
+const PollCommentThread = dynamic(() => import('@/components/polls/PollCommentThread').then((m) => m.PollCommentThread))
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,7 +34,6 @@ import Link from 'next/link'
 import type { Poll, PollOption as PollOptionType, PollVote } from '@/lib/types'
 import { isPast } from 'date-fns'
 
-export const dynamic = 'force-dynamic'
 
 export default function PollDetailPage() {
   const params = useParams()

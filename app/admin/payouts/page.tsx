@@ -30,7 +30,6 @@ import type { Registration, UserProfile, MonthClose, Payout, Round } from '@/lib
 import { subscribeToMonthRounds } from '@/lib/firebase/firestore'
 import type { MonthPayoutResult } from '@/lib/utils/payouts'
 
-export const dynamic = 'force-dynamic'
 
 function Money({ amount }: { amount: number }) {
   return (

@@ -34,7 +34,6 @@ import {
 import type { Message, UserProfile } from '@/lib/types'
 import { MESSAGE_REACTIONS } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 function timeAgo(ts: { seconds: number } | undefined): string {
   if (!ts) return ''

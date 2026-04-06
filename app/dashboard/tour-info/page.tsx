@@ -8,7 +8,6 @@ import { Info } from 'lucide-react'
 import AnnouncementsContent from './AnnouncementsContent'
 import OfficersContent from './OfficersContent'
 
-export const dynamic = 'force-dynamic'
 
 export default function TourInfoPage() {
   return (

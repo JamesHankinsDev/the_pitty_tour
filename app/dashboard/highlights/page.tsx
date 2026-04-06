@@ -21,7 +21,6 @@ import {
 } from 'lucide-react'
 import type { Round, UserProfile } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 interface Highlight {
   icon: React.ElementType

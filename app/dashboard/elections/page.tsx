@@ -7,7 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Vote } from 'lucide-react'
 import type { Election } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function ElectionsPage() {
   const [elections, setElections] = useState<Election[]>([])

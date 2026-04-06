@@ -27,7 +27,6 @@ import {
   Megaphone,
 } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
 
 function StatCard({
   label,

@@ -39,7 +39,6 @@ import {
 import type { Registration } from '@/lib/types'
 import { POINTS_BY_RANK, POINTS_DEFAULT } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
 

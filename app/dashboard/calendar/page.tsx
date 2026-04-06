@@ -60,7 +60,6 @@ import {
 import type { Round, MonthClose, ScheduledRound } from '@/lib/types'
 import { ForecastBadge } from '@/components/calendar/ForecastBadge'
 
-export const dynamic = 'force-dynamic'
 
 export default function CalendarPage() {
   const { profile, user } = useAuth()

@@ -17,7 +17,8 @@ import {
 import { ElectionPhaseBanner } from '@/components/elections/ElectionPhaseBanner'
 import { CandidateCard } from '@/components/elections/CandidateCard'
 import { RoleBadge } from '@/components/elections/RoleBadge'
-import { PollCommentThread } from '@/components/polls/PollCommentThread'
+import dynamic from 'next/dynamic'
+const PollCommentThread = dynamic(() => import('@/components/polls/PollCommentThread').then((m) => m.PollCommentThread))
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,7 +30,6 @@ import { ArrowLeft, CheckCircle2, UserPlus, Hand } from 'lucide-react'
 import Link from 'next/link'
 import type { Election, Candidate, PollVote } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function ElectionDetailPage() {
   const params = useParams()

@@ -14,7 +14,6 @@ import { Vote, Plus, Play, Lock, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import type { Election } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function AdminElectionsPage() {
   const { user } = useAuth()

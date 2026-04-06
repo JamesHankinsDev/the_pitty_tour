@@ -14,7 +14,6 @@ import { toast } from 'sonner'
 import { Vote, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-export const dynamic = 'force-dynamic'
 
 const OFFICES = [
   { key: 'commissioner', title: 'Commissioner' },

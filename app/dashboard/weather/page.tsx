@@ -15,7 +15,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Cloud, Search, MapPin, Wind, Droplets, X } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 
-export const dynamic = 'force-dynamic'
 
 const FAVORITES_KEY = 'pity_weather_favorites'
 

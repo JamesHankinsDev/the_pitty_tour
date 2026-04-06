@@ -7,8 +7,14 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { updateUserProfile, recordHandicapSnapshot } from '@/lib/firebase/firestore'
-import { HandicapChart } from '@/components/charts/HandicapChart'
-import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay'
+import dynamic from 'next/dynamic'
+const HandicapChart = dynamic(() => import('@/components/charts/HandicapChart').then((m) => m.HandicapChart), {
+  loading: () => <div className="h-48 bg-muted animate-pulse rounded-lg" />,
+})
+const QRCodeDisplay = dynamic(() => import('@/components/qr/QRCodeDisplay').then((m) => m.QRCodeDisplay), {
+  loading: () => <div className="h-48 bg-muted animate-pulse rounded-lg" />,
+  ssr: false,
+})
 import { resetOnboarding } from '@/components/onboarding/OnboardingTour'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +26,6 @@ import { formatTimestamp } from '@/lib/utils/dates'
 import { User, Target, CreditCard, Calendar, QrCode, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
-export const dynamic = 'force-dynamic'
 
 const schema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),

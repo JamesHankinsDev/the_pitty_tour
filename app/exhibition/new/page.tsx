@@ -8,7 +8,10 @@ import {
   joinExhibitionSession,
   updateCachedCourse,
 } from '@/lib/firebase/firestore'
-import { CourseSearchInput } from '@/components/exhibition/CourseSearchInput'
+import dynamic from 'next/dynamic'
+const CourseSearchInput = dynamic(() => import('@/components/exhibition/CourseSearchInput').then((m) => m.CourseSearchInput), {
+  loading: () => <div className="h-10 bg-muted animate-pulse rounded-md" />,
+})
 import { CARD_DEFINITIONS } from '@/lib/cards'
 import { generateInviteCode } from '@/lib/utils/exhibition'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -30,7 +33,6 @@ import {
 import Link from 'next/link'
 import type { CachedCourse, CachedCourseTee, ExhibitionFormat, ExhibitionTeam } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 const TEAM_COLORS = ['#16a34a', '#2563eb', '#dc2626', '#eab308', '#a855f7', '#ec4899']
 

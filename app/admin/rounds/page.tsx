@@ -26,7 +26,6 @@ import { Search, ClipboardList, ShieldCheck, ShieldX } from 'lucide-react'
 import type { Round, UserProfile } from '@/lib/types'
 import { getSeasonMonths } from '@/lib/utils/dates'
 
-export const dynamic = 'force-dynamic'
 
 export default function AdminRoundsPage() {
   const { season } = useActiveSeason()

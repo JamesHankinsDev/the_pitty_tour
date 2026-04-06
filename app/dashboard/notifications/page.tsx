@@ -20,7 +20,6 @@ import {
 } from 'lucide-react'
 import type { NotificationType } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 function getNotifIcon(type: NotificationType) {
   switch (type) {

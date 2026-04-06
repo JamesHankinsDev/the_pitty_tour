@@ -15,7 +15,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Scale, DollarSign, AlertTriangle, Trophy, Wallet } from 'lucide-react'
 import type { Registration, MonthClose } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function TreasurerPage() {
   const { profile, loading: authLoading } = useAuth()

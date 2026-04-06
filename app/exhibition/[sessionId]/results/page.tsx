@@ -26,7 +26,6 @@ import type {
   CachedCourse,
 } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function ResultsPage() {
   const params = useParams()

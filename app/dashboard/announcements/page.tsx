@@ -18,7 +18,6 @@ import { toast } from 'sonner'
 import { Megaphone, Plus, Pin, Trash2, X, Edit } from 'lucide-react'
 import type { Announcement } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 function timeAgo(ts: { seconds: number } | undefined): string {
   if (!ts) return ''

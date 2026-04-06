@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Vote } from 'lucide-react'
 import type { Poll, PollVote } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function PollsPage() {
   const { user, isDemo } = useAuth()

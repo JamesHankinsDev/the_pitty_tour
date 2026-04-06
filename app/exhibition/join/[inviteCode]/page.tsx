@@ -16,7 +16,6 @@ import { Sparkles, Users, Flag, Lock, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import type { ExhibitionSession } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function JoinPage() {
   const params = useParams()

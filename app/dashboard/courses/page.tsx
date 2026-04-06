@@ -39,7 +39,6 @@ import type { Course, CourseReview } from '@/lib/types'
 import { searchCoursesApi, getAvailableTees, formatCourseLocation, type ApiCourseResult } from '@/lib/utils/courseSearch'
 import type { CourseTee } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 /* ─── Star Rating ────────────────────────────────────────────────────────── */
 

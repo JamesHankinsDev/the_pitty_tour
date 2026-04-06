@@ -16,7 +16,6 @@ import { Separator } from '@/components/ui/separator'
 import { Calendar, Plus, CheckCircle2 } from 'lucide-react'
 import type { Season } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 const MONTH_NAMES = [
   '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',

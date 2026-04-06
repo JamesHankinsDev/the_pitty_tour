@@ -15,7 +15,6 @@ import { BarChart3, Trophy, TrendingUp, AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { LeaderboardEntry } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 function LeaderboardRow({
   entry,

@@ -20,7 +20,6 @@ import {
 import type { CurrentOfficer } from '@/lib/types'
 import { formatTimestamp } from '@/lib/utils/dates'
 
-export const dynamic = 'force-dynamic'
 
 interface OfficeDef {
   officeKey: string

@@ -24,7 +24,6 @@ import {
 } from 'lucide-react'
 import type { Feedback, FeedbackType, FeedbackStatus } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 const TYPE_META: Record<FeedbackType, { label: string; icon: typeof Bug; color: string }> = {
   bug: { label: 'Bug', icon: Bug, color: 'text-red-600 bg-red-50 border-red-200' },

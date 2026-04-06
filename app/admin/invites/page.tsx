@@ -25,7 +25,6 @@ import {
 import type { Invite } from '@/lib/types'
 import { differenceInDays, differenceInHours } from 'date-fns'
 
-export const dynamic = 'force-dynamic'
 
 function StatusBadge({ invite }: { invite: Invite }) {
   const now = Date.now()

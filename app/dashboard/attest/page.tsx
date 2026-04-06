@@ -12,7 +12,11 @@ import {
 } from '@/lib/firebase/firestore'
 import { sendPush } from '@/lib/firebase/push'
 import { getCurrentMonthKey, formatMonthKey } from '@/lib/utils/dates'
-import { QRScanner } from '@/components/qr/QRScanner'
+import dynamic from 'next/dynamic'
+const QRScanner = dynamic(() => import('@/components/qr/QRScanner').then((m) => m.QRScanner), {
+  loading: () => <div className="h-64 bg-muted animate-pulse rounded-xl" />,
+  ssr: false,
+})
 import { RoundCard } from '@/components/rounds/RoundCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -31,7 +35,6 @@ import {
 } from 'lucide-react'
 import { serverTimestamp, Timestamp } from 'firebase/firestore'
 
-export const dynamic = 'force-dynamic'
 
 type Step = 'scan' | 'review' | 'success'
 

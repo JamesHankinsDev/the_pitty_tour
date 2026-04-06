@@ -12,7 +12,6 @@ import { Vote, Plus, Lock } from 'lucide-react'
 import Link from 'next/link'
 import type { Poll } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function AdminPollsPage() {
   const [polls, setPolls] = useState<Poll[]>([])

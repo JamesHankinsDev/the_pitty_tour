@@ -29,7 +29,6 @@ import {
 import type { UserProfile, Registration } from '@/lib/types'
 import { serverTimestamp } from 'firebase/firestore'
 
-export const dynamic = 'force-dynamic'
 
 export default function AdminPlayersPage() {
   const { season } = useActiveSeason()

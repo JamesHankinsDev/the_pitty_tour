@@ -16,7 +16,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Award, Stamp, CheckCircle2, Target, Star } from 'lucide-react'
 import type { Round } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 const MIN_UNIQUE_MARKERS = 4
 const POINTS_PER_MARKER = 5

@@ -1,11 +1,14 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
-import { QRCodeDisplay } from '@/components/qr/QRCodeDisplay'
+import nextDynamic from 'next/dynamic'
+const QRCodeDisplay = nextDynamic(() => import('@/components/qr/QRCodeDisplay').then((m) => m.QRCodeDisplay), {
+  loading: () => <div className="h-64 bg-muted animate-pulse rounded-lg" />,
+  ssr: false,
+})
 import { Card, CardContent } from '@/components/ui/card'
 import { Info, QrCode } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
 
 export default function MyQRPage() {
   const { profile, user } = useAuth()

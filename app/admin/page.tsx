@@ -21,7 +21,6 @@ import {
 } from 'lucide-react'
 import type { UserProfile, Registration, Round, FlaggedRound } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 function AdminStat({
   label,

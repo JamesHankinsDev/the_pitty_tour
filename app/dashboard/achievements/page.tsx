@@ -13,7 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Medal, Lock } from 'lucide-react'
 import type { Round } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 const tierColors = {
   bronze: 'border-orange-300 bg-orange-50',

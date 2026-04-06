@@ -16,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Target, Search, TrendingDown, TrendingUp } from 'lucide-react'
 import type { Round, UserProfile } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function HandicapReviewPage() {
   const { profile, loading: authLoading } = useAuth()

@@ -36,7 +36,6 @@ import {
 import Link from 'next/link'
 import type { ExhibitionSession, ExhibitionPlayer, CachedCourse, ExhibitionHoleScore } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function LobbyPage() {
   const params = useParams()

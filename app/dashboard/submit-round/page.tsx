@@ -33,7 +33,6 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
 
 const schema18 = z.object({
   courseName: z.string().min(2, 'Course name required'),

@@ -27,7 +27,6 @@ import { isPastMonth } from '@/lib/utils/dates'
 import { DollarSign, AlertTriangle, CheckCircle2, XCircle, Zap } from 'lucide-react'
 import type { Registration, UserProfile, Round } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function AdminPrizePoolPage() {
   const { season } = useActiveSeason()

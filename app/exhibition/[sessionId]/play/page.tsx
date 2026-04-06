@@ -40,7 +40,6 @@ import type {
   CardItem,
 } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
 
 export default function ExhibitionPlayPage() {
   const params = useParams()

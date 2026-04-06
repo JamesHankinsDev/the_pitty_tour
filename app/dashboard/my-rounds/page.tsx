@@ -15,7 +15,6 @@ import { formatMonthKey, getCurrentMonthKey, isPastMonth } from '@/lib/utils/dat
 import { toast } from 'sonner'
 import { useState } from 'react'
 
-export const dynamic = 'force-dynamic'
 
 function EmptyRounds() {
   return (

@@ -11,7 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Users, Search, MapPin } from 'lucide-react'
 import { RoleBadge } from '@/components/elections/RoleBadge'
 
-export const dynamic = 'force-dynamic'
 
 export default function PlayersPage() {
   const { profile } = useAuth()
