@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import * as AvatarPrimitive from '@radix-ui/react-avatar'
+import Image from 'next/image'
 import { cn } from '@/lib/utils/cn'
 
 const Avatar = React.forwardRef<
@@ -19,17 +20,46 @@ const Avatar = React.forwardRef<
 ))
 Avatar.displayName = AvatarPrimitive.Root.displayName
 
+/**
+ * AvatarImage — wraps next/image for automatic optimization (WebP, srcset,
+ * lazy loading) while preserving Radix Avatar's fallback behavior.
+ *
+ * If src is empty/undefined, Radix never mounts the image so the
+ * AvatarFallback renders instead.
+ */
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image
-    ref={ref}
-    className={cn('aspect-square h-full w-full', className)}
-    {...props}
-  />
-))
-AvatarImage.displayName = AvatarPrimitive.Image.displayName
+>(({ className, src, alt, ...props }, ref) => {
+  // Radix AvatarPrimitive.Image handles the loaded/error state machine that
+  // controls whether the fallback shows. We render it as the outer wrapper
+  // (hidden via sr-only) so Radix tracks the src lifecycle, and layer the
+  // optimized next/image on top for the actual visual.
+  return (
+    <>
+      {/* Hidden Radix image — drives fallback state only */}
+      <AvatarPrimitive.Image
+        ref={ref}
+        className="sr-only"
+        src={src}
+        alt={alt ?? ''}
+        {...props}
+      />
+      {/* Visible optimized image */}
+      {src && (
+        <Image
+          src={src}
+          alt={alt ?? ''}
+          fill
+          sizes="48px"
+          className={cn('aspect-square h-full w-full object-cover', className)}
+          loading="lazy"
+        />
+      )}
+    </>
+  )
+})
+AvatarImage.displayName = 'AvatarImage'
 
 const AvatarFallback = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Fallback>,
