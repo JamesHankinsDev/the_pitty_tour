@@ -449,8 +449,10 @@ export async function selectRoundForScoring(
   )
   const snap = await getDocs(q)
 
+  let seasonId = ''
   const batch = writeBatch(db)
   for (const d of snap.docs) {
+    if (!seasonId) seasonId = (d.data() as Round).seasonId
     if (d.id === roundId) {
       batch.update(d.ref, { selectedForScoring: true })
     } else if (d.data().selectedForScoring) {
@@ -458,6 +460,13 @@ export async function selectRoundForScoring(
     }
   }
   await batch.commit()
+
+  // Recalculate points since the selected round may have a different score
+  if (seasonId && month) {
+    recalculateMonthPoints(seasonId, month).catch((err) =>
+      console.warn('Points recalc failed (non-critical):', err)
+    )
+  }
 }
 
 export async function getRoundById(id: string): Promise<Round | null> {
@@ -572,11 +581,19 @@ export async function addAttestation(
   // Can't edit after attestation — handled by security rules too
   const newAttestations = [...round.attestations, attestation]
   const isValid = newAttestations.length >= 1
+  const wasValid = round.isValid
 
   await updateDoc(roundRef, {
     attestations: arrayUnion(attestation),
     isValid,
   })
+
+  // If this attestation made the round valid, recalculate month points
+  if (isValid && !wasValid && round.seasonId && round.month) {
+    recalculateMonthPoints(round.seasonId, round.month).catch((err) =>
+      console.warn('Points recalc failed (non-critical):', err)
+    )
+  }
 }
 
 export async function adminOverrideRound(
@@ -584,11 +601,22 @@ export async function adminOverrideRound(
   isValid: boolean,
   note: string
 ): Promise<void> {
+  const roundSnap = await getDoc(doc(db, COLLECTIONS.ROUNDS, roundId))
   await updateDoc(doc(db, COLLECTIONS.ROUNDS, roundId), {
     isValid,
     adminOverride: true,
     adminOverrideNote: note,
   })
+
+  // Recalculate points since validity changed
+  if (roundSnap.exists()) {
+    const round = roundSnap.data() as Round
+    if (round.seasonId && round.month) {
+      recalculateMonthPoints(round.seasonId, round.month).catch((err) =>
+        console.warn('Points recalc failed (non-critical):', err)
+      )
+    }
+  }
 }
 
 // ─── Points Operations ────────────────────────────────────────────────────────
@@ -620,6 +648,85 @@ export async function upsertPoints(
   } else {
     await updateDoc(snap.docs[0].ref, data as Record<string, unknown>)
   }
+}
+
+/**
+ * Recalculate and persist monthly points for all players in a given month.
+ *
+ * Reads all valid 18-hole rounds for the month, computes net-based rankings
+ * and points, then upserts a Points doc for every player who has a valid round.
+ *
+ * Called automatically when:
+ * - A round becomes valid (attestation)
+ * - A player changes their selected scoring round
+ * - An admin overrides a round's validity
+ *
+ * Fire-and-forget — callers catch errors and log them.
+ */
+export async function recalculateMonthPoints(
+  seasonId: string,
+  month: string
+): Promise<void> {
+  if (guardDemoWrite('Recalculating points')) return
+
+  const { calculateMonthlyPoints } = await import('@/lib/utils/scoring')
+
+  // Fetch all rounds for this season + month
+  const roundsSnap = await getDocs(
+    query(
+      collection(db, COLLECTIONS.ROUNDS),
+      where('seasonId', '==', seasonId),
+      where('month', '==', month)
+    )
+  )
+  const rounds = roundsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Round))
+
+  // Compute points (only valid 18-hole rounds count)
+  const pointsMap = calculateMonthlyPoints(rounds)
+
+  // Batch-upsert points for every player
+  // First, read existing points docs so we can update rather than duplicate
+  const existingSnap = await getDocs(
+    query(
+      collection(db, COLLECTIONS.POINTS),
+      where('seasonId', '==', seasonId),
+      where('month', '==', month)
+    )
+  )
+  const existingByUid = new Map<string, string>() // uid → doc id
+  for (const d of existingSnap.docs) {
+    existingByUid.set((d.data() as Points).uid, d.id)
+  }
+
+  const batch = writeBatch(db)
+
+  for (const [uid, pts] of pointsMap) {
+    const docId = existingByUid.get(uid)
+    const data = {
+      uid,
+      seasonId,
+      month,
+      grossPoints: pts.grossPoints,
+      netPoints: pts.netPoints,
+      totalMonthlyPoints: pts.totalMonthlyPoints,
+      cumulativePoints: 0, // cumulative is recomputed by the season leaderboard
+    }
+
+    if (docId) {
+      batch.update(doc(db, COLLECTIONS.POINTS, docId), data)
+    } else {
+      batch.set(doc(collection(db, COLLECTIONS.POINTS)), data)
+    }
+    existingByUid.delete(uid) // mark as processed
+  }
+
+  // Remove points docs for players who no longer have valid rounds this month
+  // (e.g., admin invalidated their round)
+  for (const [, docId] of existingByUid) {
+    batch.delete(doc(db, COLLECTIONS.POINTS, docId))
+  }
+
+  await batch.commit()
 }
 
 export async function getSeasonPoints(seasonId: string): Promise<Points[]> {

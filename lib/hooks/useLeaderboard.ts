@@ -19,6 +19,7 @@ export function useMonthLeaderboard(
   const { isDemo } = useAuth()
   const { users } = useUsers()
   const [rounds, setRounds] = useState<Round[]>([])
+  const [storedPoints, setStoredPoints] = useState<Points[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -27,11 +28,24 @@ export function useMonthLeaderboard(
       return
     }
     setLoading(true)
-    const unsub = subscribeToMonthRounds(seasonId, month, (r) => {
+    let roundsReady = false
+    let pointsReady = false
+    const checkReady = () => {
+      if (roundsReady && pointsReady) setLoading(false)
+    }
+
+    const unsubRounds = subscribeToMonthRounds(seasonId, month, (r) => {
       setRounds(r)
-      setLoading(false)
+      roundsReady = true
+      checkReady()
     })
-    return unsub
+    // Subscribe to stored points for this month
+    const unsubPoints = subscribeToSeasonPoints(seasonId, (pts) => {
+      setStoredPoints(pts.filter((p) => p.month === month))
+      pointsReady = true
+      checkReady()
+    })
+    return () => { unsubRounds(); unsubPoints() }
   }, [seasonId, month, isDemo])
 
   // Is this month finalized (past) or still in progress?
@@ -52,14 +66,12 @@ export function useMonthLeaderboard(
       const existing = roundByPlayer.get(round.uid)
 
       if (isOfficial) {
-        // Prefer the explicitly selected round
         if (round.selectedForScoring) {
           roundByPlayer.set(round.uid, round)
         } else if (!existing || (!existing.selectedForScoring && round.grossScore < existing.grossScore)) {
           roundByPlayer.set(round.uid, round)
         }
       } else {
-        // Unofficial: always take the best gross score
         if (!existing || round.grossScore < existing.grossScore) {
           roundByPlayer.set(round.uid, round)
         }
@@ -73,20 +85,27 @@ export function useMonthLeaderboard(
     const grossRanked = assignRanks(playerRounds, (r) => r.grossScore)
     const netRanked = assignRanks(playerRounds, (r) => r.netScore)
 
-    const pointsMap = calculateMonthlyPoints(rounds)
+    // Use stored points if available (pre-calculated), otherwise compute live
+    const storedPointsMap = new Map<string, Points>()
+    for (const p of storedPoints) storedPointsMap.set(p.uid, p)
+
+    const livePointsMap = storedPointsMap.size > 0
+      ? null // prefer stored
+      : calculateMonthlyPoints(rounds)
 
     const makeEntry = (round: Round & { rank: number }): LeaderboardEntry => {
       const user = userMap.get(round.uid)
-      const pts = pointsMap.get(round.uid)
+      const stored = storedPointsMap.get(round.uid)
+      const live = livePointsMap?.get(round.uid)
       return {
         uid: round.uid,
         displayName: user?.displayName ?? 'Unknown',
         photoURL: user?.photoURL ?? '',
         grossScore: round.grossScore,
         netScore: round.netScore,
-        grossPoints: pts?.grossPoints ?? 0,
-        netPoints: pts?.netPoints ?? 0,
-        totalPoints: pts?.totalMonthlyPoints ?? 0,
+        grossPoints: stored?.grossPoints ?? live?.grossPoints ?? 0,
+        netPoints: stored?.netPoints ?? live?.netPoints ?? 0,
+        totalPoints: stored?.totalMonthlyPoints ?? live?.totalMonthlyPoints ?? 0,
         roundsPlayed: 1,
         rank: round.rank,
       }
@@ -96,7 +115,7 @@ export function useMonthLeaderboard(
       grossStandings: grossRanked.map(makeEntry),
       netStandings: netRanked.map(makeEntry),
     }
-  }, [rounds, users, isDemo, isOfficial])
+  }, [rounds, storedPoints, users, isDemo, isOfficial])
 
   if (isDemo) return { grossStandings: DEMO_LEADERBOARD.grossStandings, netStandings: DEMO_LEADERBOARD.netStandings, loading: false, isOfficial: false }
   return { grossStandings, netStandings, loading, isOfficial }

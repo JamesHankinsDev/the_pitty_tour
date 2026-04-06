@@ -596,18 +596,22 @@ export const SEASON_1ST_PCT = 0.50
 export const SEASON_2ND_PCT = 0.30
 export const SEASON_3RD_PCT = 0.20
 
-/** Points awarded by net-score rank */
-
+/**
+ * Points awarded by net-score rank.
+ * 1st = 500, each subsequent place −50.  Floor = 25 for 11th+.
+ * Ties: sum the positions shared and split evenly
+ * (e.g. tie for 2nd → (450 + 400) / 2 = 425 each).
+ */
 export const POINTS_BY_RANK: Record<number, number> = {
   1: 500,
   2: 450,
-  3: 375,
+  3: 400,
   4: 350,
-  5: 275,
-  6: 200,
-  7: 150,
-  8: 100,
-  9: 75,
+  5: 300,
+  6: 250,
+  7: 200,
+  8: 150,
+  9: 100,
   10: 50,
 }
 

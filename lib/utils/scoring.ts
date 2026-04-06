@@ -103,7 +103,7 @@ export function calculateMonthlyPoints(
   const netRanked = assignRanks(validRounds, (r) => r.netScore)
 
   // For ties, split the combined points of the shared positions.
-  // e.g. two tied at 2nd: (450 + 375) / 2 = 412.5 each
+  // e.g. two tied at 2nd: (450 + 400) / 2 = 425 each
   const tiedCountByRank = new Map<number, number>()
   for (const entry of netRanked) {
     tiedCountByRank.set(entry.rank, (tiedCountByRank.get(entry.rank) ?? 0) + 1)

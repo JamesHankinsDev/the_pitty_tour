@@ -37,6 +37,7 @@ import {
   Shirt,
 } from 'lucide-react'
 import type { Registration } from '@/lib/types'
+import { POINTS_BY_RANK, POINTS_DEFAULT } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -669,15 +670,13 @@ export default function PrizePoolPage() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Points by Net Finish</CardTitle>
               <CardDescription>
-                Awarded each month based on net score ranking
+                1st place receives 500 pts, each place after drops by 50. Ties
+                sum the shared positions and split evenly.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                {Object.entries({
-                  1: 500, 2: 450, 3: 375, 4: 350, 5: 275,
-                  6: 200, 7: 150, 8: 100, 9: 75, 10: 50,
-                }).map(([rank, pts]) => (
+                {Object.entries(POINTS_BY_RANK).map(([rank, pts]) => (
                   <div key={rank} className="flex justify-between py-1.5 border-b text-sm">
                     <span className="text-muted-foreground">
                       {rank === '1' ? '1st' : rank === '2' ? '2nd' : rank === '3' ? '3rd' : `${rank}th`}
@@ -688,8 +687,11 @@ export default function PrizePoolPage() {
               </div>
               <div className="flex justify-between py-1.5 text-sm mt-1">
                 <span className="text-muted-foreground">11th+</span>
-                <span className="font-semibold">25 pts</span>
+                <span className="font-semibold">{POINTS_DEFAULT} pts</span>
               </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Example tie: two players tied for 2nd split (450 + 400) / 2 = 425 pts each.
+              </p>
             </CardContent>
           </Card>
 
