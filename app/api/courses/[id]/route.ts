@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuthHeader } from '@/lib/firebase/apiAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,11 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const uid = await verifyAuthHeader(req)
+  if (!uid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const id = params.id
   if (!id) {
     return NextResponse.json({ error: 'Missing course id' }, { status: 400 })

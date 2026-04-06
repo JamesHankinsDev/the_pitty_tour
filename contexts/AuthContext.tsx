@@ -150,9 +150,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const refreshHandicapFromGhin = async (userProfile: UserProfile) => {
+    const { authHeaders } = await import('@/lib/firebase/authFetch')
+    const headers = await authHeaders()
     const res = await fetch('/api/ghin/lookup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ ghinNumber: userProfile.ghinNumber }),
     })
 

@@ -70,9 +70,11 @@ export default function ProfilePage() {
     setGhinError(null)
 
     try {
+      const { authHeaders } = await import('@/lib/firebase/authFetch')
+      const headers = await authHeaders()
       const res = await fetch('/api/ghin/lookup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ ghinNumber: ghinNumber.trim() }),
       })
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuthHeader } from '@/lib/firebase/apiAuth'
 
 const GHIN_API_BASE = 'https://api2.ghin.com/api/v1'
 const FIREBASE_SESSION_URL =
@@ -80,6 +81,11 @@ async function getGhinToken(): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  const uid = await verifyAuthHeader(req)
+  if (!uid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const { ghinNumber } = await req.json()
 

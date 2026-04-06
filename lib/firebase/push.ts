@@ -1,3 +1,5 @@
+import { authHeaders } from './authFetch'
+
 /**
  * Send push notifications via the server-side API route.
  * This is a fire-and-forget helper — failures are logged but don't throw.
@@ -9,9 +11,10 @@ export async function sendPush(data: {
   link?: string
 }): Promise<void> {
   try {
+    const headers = await authHeaders()
     await fetch('/api/push/send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(data),
     })
   } catch (err) {
@@ -31,9 +34,9 @@ export async function sendPushToAll(
   try {
     const { getAllUsers } = await import('./firestore')
     const users = await getAllUsers()
-    const uids = users.map((u) => u.uid).filter((uid) => uid !== excludeUid)
-    if (uids.length === 0) return
-    await sendPush({ recipientUids: uids, ...data })
+    const recipientUids = users.map((u) => u.uid).filter((u) => u !== excludeUid)
+    if (recipientUids.length === 0) return
+    await sendPush({ recipientUids, ...data })
   } catch (err) {
     console.warn('Push to all failed:', err)
   }

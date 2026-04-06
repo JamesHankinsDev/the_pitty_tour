@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminMessaging } from '@/lib/firebase/admin'
+import { verifyAuthHeader } from '@/lib/firebase/apiAuth'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
@@ -32,6 +33,11 @@ interface PushRequest {
 }
 
 export async function POST(req: NextRequest) {
+  const uid = await verifyAuthHeader(req)
+  if (!uid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const data: PushRequest = await req.json()
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuthHeader } from '@/lib/firebase/apiAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,6 +9,11 @@ export const dynamic = 'force-dynamic'
  * Protects the API key server-side.
  */
 export async function GET(req: NextRequest) {
+  const uid = await verifyAuthHeader(req)
+  if (!uid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const query = searchParams.get('q')
 

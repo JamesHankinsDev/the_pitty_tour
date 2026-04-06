@@ -75,7 +75,9 @@ export async function importCourseFromApi(apiId: number): Promise<CachedCourse |
 
   // Fetch full detail from our server-side proxy
   try {
-    const res = await fetch(`/api/courses/${apiId}`)
+    const { authHeaders } = await import('@/lib/firebase/authFetch')
+    const headers = await authHeaders()
+    const res = await fetch(`/api/courses/${apiId}`, { headers })
     if (!res.ok) return null
     const data = await res.json()
     const c = data.course

@@ -89,7 +89,9 @@ export async function searchCoursesApi(query: string): Promise<ApiCourseResult[]
 
   const promise = (async () => {
     try {
-      const res = await fetch(`/api/courses/search?q=${encodeURIComponent(query)}`)
+      const { authHeaders } = await import('@/lib/firebase/authFetch')
+      const headers = await authHeaders()
+      const res = await fetch(`/api/courses/search?q=${encodeURIComponent(query)}`, { headers })
       if (!res.ok) {
         return []
       }
