@@ -26,6 +26,7 @@ export interface UserProfile {
   lookingForPartner?: boolean        // true = actively seeking a playing partner
   lookingForPartnerNote?: string     // optional context e.g. "Saturday AM at Bethpage"
   lookingForPartnerAt?: Timestamp    // when the flag was set
+  exhibitionRecord?: { wins: number; losses: number; ties: number }
 }
 
 // ─── Message Board ──────────────────────────────────────────────────────────
@@ -316,6 +317,7 @@ export interface ExhibitionSession {
   startedAt: Timestamp | null
   completedAt: Timestamp | null
   inviteCode: string
+  soloPlay: boolean
   // Tee selection locked at session start
   teeName: string
   slope: number
@@ -340,6 +342,7 @@ export interface ExhibitionPlayer {
   userId: string
   displayName: string
   photoURL: string | null
+  isBot: boolean
   handicapIndex: number
   courseHandicap: number
   teamId: string | null

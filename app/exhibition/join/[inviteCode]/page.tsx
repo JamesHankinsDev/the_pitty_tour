@@ -41,6 +41,7 @@ export default function JoinPage() {
         userId: user.uid,
         displayName: profile.displayName,
         photoURL: profile.photoURL ?? null,
+        isBot: false,
         handicapIndex: profile.handicapIndex,
         courseHandicap: 0, // computed at round start
         teamId: null,

@@ -1,21 +1,44 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUsers } from '@/contexts/UsersContext'
+import { useActiveSeason } from '@/lib/hooks/useSeason'
+import { subscribeToSeasonPoints } from '@/lib/firebase/firestore'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Users, Search, MapPin } from 'lucide-react'
+import { Users, Search, MapPin, Trophy, TrendingUp, Hash, Swords } from 'lucide-react'
 import { RoleBadge } from '@/components/elections/RoleBadge'
-
+import type { Points } from '@/lib/types'
 
 export default function PlayersPage() {
-  const { profile } = useAuth()
+  const { profile, isDemo } = useAuth()
   const { users, loading } = useUsers()
+  const { season } = useActiveSeason()
   const [search, setSearch] = useState('')
+  const [allPoints, setAllPoints] = useState<Points[]>([])
+  const [selectedUid, setSelectedUid] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isDemo || !season) return
+    const unsub = subscribeToSeasonPoints(season.id, setAllPoints)
+    return unsub
+  }, [season, isDemo])
+
+  // Aggregate points per player and compute ranks
+  const playerStats = useMemo(() => {
+    const totals = new Map<string, number>()
+    for (const pts of allPoints) {
+      totals.set(pts.uid, (totals.get(pts.uid) ?? 0) + pts.totalMonthlyPoints)
+    }
+    const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1])
+    const ranks = new Map<string, number>()
+    sorted.forEach(([uid], i) => ranks.set(uid, i + 1))
+    return { totals, ranks }
+  }, [allPoints])
 
   const filtered = users
     .filter((p) =>
@@ -56,10 +79,10 @@ export default function PlayersPage() {
         />
       </div>
 
-      {/* Player list */}
-      <div className="space-y-2">
+      {/* Player cards */}
+      <div className="grid grid-cols-2 gap-3">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="col-span-2 text-center py-12 text-muted-foreground">
             <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
             <p className="text-sm">
               {search ? 'No players match your search' : 'No players registered yet'}
@@ -69,60 +92,125 @@ export default function PlayersPage() {
           filtered.map((player) => {
             const isYou = player.uid === profile?.uid
             const isLfg = player.lookingForPartner
+            const rank = playerStats.ranks.get(player.uid)
+            const points = playerStats.totals.get(player.uid) ?? 0
+            const isFlipped = selectedUid === player.uid
+            const rec = player.exhibitionRecord ?? { wins: 0, losses: 0, ties: 0 }
+            const exhibTotal = rec.wins + rec.losses + rec.ties
 
             return (
-              <Card
+              <div
                 key={player.uid}
-                className={isYou ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-900/30' : ''}
+                className="perspective cursor-pointer"
+                onClick={() => setSelectedUid(isFlipped ? null : player.uid)}
               >
-                <CardContent className="p-4 flex items-center gap-3">
-                  <Avatar className="w-10 h-10 shrink-0">
-                    <AvatarImage src={player.photoURL} />
-                    <AvatarFallback>
-                      {player.displayName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-sm truncate">
-                        {player.displayName}
-                      </p>
-                      {isYou && (
-                        <Badge variant="success" className="text-xs">You</Badge>
+                <div className={`flip-inner ${isFlipped ? 'flipped' : ''}`}>
+                  {/* ── FRONT ──────────────────────────────────── */}
+                  <Card
+                    className={`flip-face overflow-hidden ${
+                      isYou
+                        ? 'border-green-300 dark:border-green-700 ring-1 ring-green-200 dark:ring-green-800'
+                        : ''
+                    }`}
+                  >
+                    <div className="relative bg-gradient-to-br from-green-600 to-green-800 dark:from-green-800 dark:to-green-950 p-4 pb-10">
+                      {rank && (
+                        <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                          <span className="text-white text-xs font-black">
+                            {rank <= 3 ? ['', '🥇', '🥈', '🥉'][rank] : `#${rank}`}
+                          </span>
+                        </div>
                       )}
-                      {player.isAdmin && (
-                        <Badge variant="outline" className="text-xs">Admin</Badge>
-                      )}
-                      {player.roles?.map((role) => (
-                        <RoleBadge key={role} officeKey={role} />
-                      ))}
                       {isLfg && (
-                        <Badge variant="warning" className="text-xs flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
+                        <Badge variant="warning" className="absolute top-2 left-2 text-xs">
+                          <MapPin className="w-3 h-3 mr-0.5" />
                           LFG
                         </Badge>
                       )}
                     </div>
-                    {player.lookingForPartnerNote && isLfg && (
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {player.lookingForPartnerNote}
-                      </p>
-                    )}
-                  </div>
+                    <CardContent className="p-3 -mt-8 relative">
+                      <div className="flex justify-center mb-2">
+                        <Avatar className="w-16 h-16 border-4 border-background shadow-lg">
+                          <AvatarImage src={player.photoURL} />
+                          <AvatarFallback className="text-xl font-bold">
+                            {player.displayName[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <div className="text-center mb-3">
+                        <p className="font-bold text-sm truncate">{player.displayName}</p>
+                        <div className="flex items-center justify-center gap-1 flex-wrap mt-1">
+                          {isYou && <Badge variant="success" className="text-xs">You</Badge>}
+                          {player.isAdmin && <Badge variant="outline" className="text-xs">Admin</Badge>}
+                          {player.roles?.map((role) => (
+                            <RoleBadge key={role} officeKey={role} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <StatBlock icon={Hash} label="HCP" value={String(player.handicapIndex)} />
+                        <StatBlock icon={TrendingUp} label="Points" value={String(points || '—')} />
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  <div className="text-right shrink-0">
-                    <p className="text-lg font-bold">
-                      {player.handicapIndex}
-                    </p>
-                    <p className="text-xs text-muted-foreground">HCP</p>
-                  </div>
-                </CardContent>
-              </Card>
+                  {/* ── BACK ───────────────────────────────────── */}
+                  <Card
+                    className={`flip-face flip-back overflow-hidden ${
+                      isYou
+                        ? 'border-green-300 dark:border-green-700 ring-1 ring-green-200 dark:ring-green-800'
+                        : ''
+                    }`}
+                  >
+                    <div className="bg-gradient-to-br from-green-600 to-green-800 dark:from-green-800 dark:to-green-950 p-3">
+                      <p className="text-white font-bold text-sm truncate text-center">{player.displayName}</p>
+                      <div className="flex items-center justify-center gap-1 flex-wrap mt-1">
+                        {isYou && <Badge variant="success" className="text-xs">You</Badge>}
+                        {player.roles?.map((role) => (
+                          <RoleBadge key={role} officeKey={role} />
+                        ))}
+                      </div>
+                    </div>
+                    <CardContent className="p-3 space-y-1.5">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <StatBlock icon={Trophy} label="Rank" value={rank ? `#${rank}` : '—'} />
+                        <StatBlock icon={Hash} label="HCP" value={String(player.handicapIndex)} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <StatBlock icon={TrendingUp} label="Points" value={String(points || '—')} />
+                        <StatBlock
+                          icon={Swords}
+                          label="Exhibition"
+                          value={exhibTotal > 0 ? `${rec.wins}-${rec.losses}-${rec.ties}` : '—'}
+                        />
+                      </div>
+                      {player.lookingForPartnerNote && isLfg && (
+                        <p className="text-xs text-muted-foreground text-center pt-1">
+                          <MapPin className="w-3 h-3 inline mr-1" />
+                          {player.lookingForPartnerNote}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground text-center pt-1 opacity-50">
+                        Tap to flip back
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             )
           })
         )}
       </div>
+    </div>
+  )
+}
+
+function StatBlock({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-muted/50 p-2 text-center">
+      <Icon className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-0.5" />
+      <p className="text-sm font-bold leading-none">{value}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
     </div>
   )
 }

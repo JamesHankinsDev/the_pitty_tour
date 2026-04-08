@@ -10,13 +10,16 @@ import {
   updateExhibitionPlayer,
   updateExhibitionSession,
   removeExhibitionPlayer,
+  joinExhibitionSession,
 } from '@/lib/firebase/firestore'
 import {
   calculateCourseHandicap,
   distributeHandicapStrokes,
   type HoleData,
 } from '@/lib/utils/exhibition'
+import { generateBotName, generateBotScores } from '@/lib/utils/botPlayer'
 import { Timestamp } from 'firebase/firestore'
+import { db } from '@/lib/firebase/config'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +35,9 @@ import {
   X,
   Sparkles,
   ArrowLeft,
+  Bot,
 } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Link from 'next/link'
 import type { ExhibitionSession, ExhibitionPlayer, CachedCourse, ExhibitionHoleScore } from '@/lib/types'
 
@@ -49,6 +54,8 @@ export default function LobbyPage() {
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [mimicUid, setMimicUid] = useState('')
+  const [addingBot, setAddingBot] = useState(false)
 
   useEffect(() => {
     if (!sessionId) return
@@ -88,6 +95,38 @@ export default function LobbyPage() {
     await removeExhibitionPlayer(sessionId, playerUid)
   }
 
+  const handleAddBot = async () => {
+    if (!mimicUid || addingBot) return
+    const mimicPlayer = players.find((p) => p.userId === mimicUid)
+    if (!mimicPlayer) return
+    setAddingBot(true)
+    try {
+      const botId = `bot_${Date.now()}`
+      await joinExhibitionSession(sessionId, {
+        userId: botId,
+        displayName: generateBotName(),
+        photoURL: null,
+        isBot: true,
+        handicapIndex: mimicPlayer.handicapIndex,
+        courseHandicap: 0,
+        teamId: null,
+        status: 'joined',
+        drinksConsumed: 0,
+        cardInventory: [],
+        pendingCards: [],
+        scores: {},
+      })
+      toast.success(`Bot added (HCP ${mimicPlayer.handicapIndex}, mirroring ${mimicPlayer.displayName})`)
+      setMimicUid('')
+    } catch {
+      toast.error('Failed to add bot')
+    } finally {
+      setAddingBot(false)
+    }
+  }
+
+  const humanPlayers = players.filter((p) => !p.isBot)
+
   const handleStart = async () => {
     if (!session || !course || !isHost) return
     setStarting(true)
@@ -101,30 +140,68 @@ export default function LobbyPage() {
         })
         .map((h) => ({ number: h.number, par: h.par, strokeIndex: h.strokeIndex }))
 
-      // Calculate course handicap and distribute strokes for each player
-      for (const p of players) {
+      // If solo play, auto-create a bot matched to the host
+      if (session.soloPlay && !players.some((p) => p.isBot)) {
+        const host = players.find((p) => p.userId === session.hostId)
+        if (host) {
+          const botId = `bot_${Date.now()}`
+          await joinExhibitionSession(sessionId, {
+            userId: botId,
+            displayName: generateBotName(),
+            photoURL: null,
+            isBot: true,
+            handicapIndex: host.handicapIndex,
+            courseHandicap: 0,
+            teamId: null,
+            status: 'joined',
+            drinksConsumed: 0,
+            cardInventory: [],
+            pendingCards: [],
+            scores: {},
+          })
+          // Re-read players so the bot is included in the loop below
+          // (small delay for Firestore to propagate)
+          await new Promise((r) => setTimeout(r, 500))
+        }
+      }
+
+      // Re-fetch players to include any just-added solo bot
+      const allPlayersSnap = await import('firebase/firestore').then(m =>
+        m.getDocs(m.collection(db, 'exhibitionSessions', sessionId, 'players'))
+      )
+      const allPlayers = allPlayersSnap.docs.map(d => ({ ...d.data() } as ExhibitionPlayer))
+
+      // Calculate course handicap, distribute strokes, and generate bot scores
+      for (const p of allPlayers) {
         const courseHcp = calculateCourseHandicap(
           p.handicapIndex,
           session.slope,
           session.courseRating,
-          course.par
+          course.par,
+          session.holes
         )
         const strokeMap = distributeHandicapStrokes(courseHcp, hostedHoles)
 
-        // Seed scores map with par/strokeIndex/handicapStrokes per hole
+        // For bots, pre-generate scores; for humans, seed empty
+        const botGross = p.isBot
+          ? generateBotScores(p.handicapIndex, courseHcp, hostedHoles)
+          : null
+
         const scores: Record<string, ExhibitionHoleScore> = {}
         for (const h of hostedHoles) {
+          const strokes = strokeMap[String(h.number)] ?? 0
+          const gross = botGross ? botGross[String(h.number)] : null
           scores[String(h.number)] = {
-            gross: null,
-            net: null,
+            gross,
+            net: gross !== null ? gross - strokes : null,
             par: h.par,
             strokeIndex: h.strokeIndex,
-            handicapStrokes: strokeMap[String(h.number)] ?? 0,
+            handicapStrokes: strokes,
             stablefordPoints: null,
             cardUsed: null,
             cardReceived: null,
             honestAbeActive: false,
-            submittedAt: null,
+            submittedAt: botGross ? Timestamp.now() : null,
           }
         }
 
@@ -258,6 +335,7 @@ export default function LobbyPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium truncate">{p.displayName}</p>
                         {p.userId === session.hostId && <Badge variant="outline" className="text-xs">Host</Badge>}
+                        {p.isBot && <Badge variant="secondary" className="text-xs"><Bot className="w-3 h-3 mr-0.5" />Bot</Badge>}
                         {team && (
                           <Badge
                             className="text-xs text-white border-0"
@@ -297,6 +375,42 @@ export default function LobbyPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Add Bot (host only) */}
+        {isHost && humanPlayers.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-sm font-semibold flex items-center gap-2 mb-2">
+                <Bot className="w-4 h-4" />
+                Add a Bot
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Pick a player to mimic. The bot will match their handicap and generate realistic scores.
+              </p>
+              <div className="flex gap-2">
+                <Select value={mimicUid} onValueChange={setMimicUid}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Mimic player..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {humanPlayers.map((p) => (
+                      <SelectItem key={p.userId} value={p.userId}>
+                        {p.displayName} (HCP {p.handicapIndex})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="green"
+                  onClick={handleAddBot}
+                  disabled={!mimicUid || addingBot}
+                >
+                  {addingBot ? 'Adding...' : 'Add'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Start button */}
         {isHost ? (

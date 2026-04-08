@@ -67,6 +67,7 @@ export default function NewExhibitionPage() {
   const [teamMode, setTeamMode] = useState(false)
   const [teamA, setTeamA] = useState({ name: 'Team A', color: TEAM_COLORS[0] })
   const [teamB, setTeamB] = useState({ name: 'Team B', color: TEAM_COLORS[1] })
+  const [soloPlay, setSoloPlay] = useState(false)
   const [useCards, setUseCards] = useState(false)
   const [nsfwCards, setNsfwCards] = useState(false)
   const [activeCards, setActiveCards] = useState<Set<string>>(
@@ -142,9 +143,10 @@ export default function NewExhibitionPage() {
         scoringMode,
         teamMode,
         teams,
-        useCards,
-        activeCards: useCards ? Array.from(activeCards) : [],
-        nsfwCards,
+        soloPlay,
+        useCards: soloPlay ? false : useCards,
+        activeCards: soloPlay ? [] : useCards ? Array.from(activeCards) : [],
+        nsfwCards: soloPlay ? false : nsfwCards,
         inviteCode,
         teeName: selectedTee.name,
         slope: selectedTee.slope,
@@ -157,6 +159,7 @@ export default function NewExhibitionPage() {
         userId: user.uid,
         displayName: profile.displayName,
         photoURL: profile.photoURL ?? null,
+        isBot: false,
         handicapIndex: profile.handicapIndex,
         courseHandicap: 0, // computed at round start
         teamId: null,
@@ -401,6 +404,23 @@ export default function NewExhibitionPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
+                  Solo Play
+                  <label className="relative inline-flex items-center cursor-pointer ml-auto">
+                    <input type="checkbox" checked={soloPlay} onChange={(e) => { setSoloPlay(e.target.checked); if (e.target.checked) { setTeamMode(false); setUseCards(false) } }} className="sr-only peer" />
+                    <div className="w-10 h-5 bg-muted peer-checked:bg-purple-600 rounded-full relative transition-colors">
+                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${soloPlay ? 'translate-x-5' : ''}`} />
+                    </div>
+                  </label>
+                </CardTitle>
+                <CardDescription>
+                  Play against a golf bot matched to your handicap. No invite code needed.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className={soloPlay ? 'opacity-50 pointer-events-none' : ''}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
                   Teams
                   <label className="relative inline-flex items-center cursor-pointer ml-auto">
                     <input type="checkbox" checked={teamMode} onChange={(e) => setTeamMode(e.target.checked)} className="sr-only peer" />
@@ -440,7 +460,7 @@ export default function NewExhibitionPage() {
               )}
             </Card>
 
-            <Card>
+            <Card className={soloPlay ? 'opacity-50 pointer-events-none' : ''}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   Cards
@@ -547,13 +567,15 @@ export default function NewExhibitionPage() {
                   <span className="font-medium capitalize">{scoringMode}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Teams</span>
-                  <span className="font-medium">{teamMode ? `${teamA.name} vs ${teamB.name}` : 'Individual'}</span>
+                  <span className="text-muted-foreground">Mode</span>
+                  <span className="font-medium">{soloPlay ? 'Solo Play (vs Bot)' : teamMode ? `${teamA.name} vs ${teamB.name}` : 'Individual'}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cards</span>
-                  <span className="font-medium">{useCards ? `${activeCards.size} active${nsfwCards ? ' (NSFW)' : ''}` : 'Off'}</span>
-                </div>
+                {!soloPlay && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Cards</span>
+                    <span className="font-medium">{useCards ? `${activeCards.size} active${nsfwCards ? ' (NSFW)' : ''}` : 'Off'}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

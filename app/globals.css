@@ -58,6 +58,24 @@
   }
 }
 
+/* Card flip */
+.perspective { perspective: 800px; }
+.flip-inner {
+  transition: transform 0.5s ease;
+  transform-style: preserve-3d;
+  position: relative;
+}
+.flip-inner.flipped { transform: rotateY(180deg); }
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  transform: rotateY(180deg);
+  position: absolute;
+  inset: 0;
+}
+
 /* Mobile touch improvements */
 @layer utilities {
   .touch-action-pan-y {

@@ -55,13 +55,20 @@ export function getStablefordPoints(
 /**
  * Course handicap = round(handicapIndex × (slope / 113) + (courseRating - par))
  */
+/**
+ * Calculate course handicap.
+ * For 18 holes: round(handicapIndex × (slope/113) + (rating - par))
+ * For 9 holes: half the 18-hole course handicap (rounded)
+ */
 export function calculateCourseHandicap(
   handicapIndex: number,
   slope: number,
   rating: number,
-  par: number
+  par: number,
+  holes: 9 | 18 = 18
 ): number {
-  return Math.round(handicapIndex * (slope / 113) + (rating - par))
+  const full = Math.round(handicapIndex * (slope / 113) + (rating - par))
+  return holes === 9 ? Math.round(full / 2) : full
 }
 
 /**

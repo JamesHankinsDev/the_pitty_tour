@@ -9,8 +9,11 @@ import {
   getCachedCourse,
   updateExhibitionPlayer,
   updateExhibitionSession,
+  updateUserProfile,
   logCardEvent,
 } from '@/lib/firebase/firestore'
+import { determineExhibitionResults } from '@/lib/utils/exhibitionRecord'
+import { increment } from 'firebase/firestore'
 import { getStablefordPoints } from '@/lib/utils/exhibition'
 import { applyAutoCard, checkStrokeShield } from '@/lib/cardEngine'
 import { HoleScorecard } from '@/components/exhibition/HoleScorecard'
@@ -105,6 +108,24 @@ export default function ExhibitionPlayPage() {
 
   const holeInfo = course?.holes.find((h) => h.number === currentHole)
 
+  // Solo play: hide bot scores until the human player submits for the current hole
+  const humanPlayer = players.find((p) => !p.isBot)
+  const humanScoredCurrentHole = humanPlayer?.scores[String(currentHole)]?.gross != null
+
+  const visiblePlayers = useMemo(() => {
+    if (!session?.soloPlay) return players
+    return players.map((p) => {
+      if (!p.isBot) return p
+      // Show bot scores for past holes, hide current hole until human submits
+      const scores = { ...p.scores }
+      const key = String(currentHole)
+      if (!humanScoredCurrentHole && scores[key]) {
+        scores[key] = { ...scores[key], gross: null, net: null }
+      }
+      return { ...p, scores }
+    })
+  }, [players, session?.soloPlay, currentHole, humanScoredCurrentHole])
+
   // Are all players' scores submitted for current hole?
   const allScored = players.every((p) => {
     const s = p.scores[String(currentHole)]
@@ -174,6 +195,20 @@ export default function ExhibitionPlayPage() {
     advanceToNextHole()
   }
 
+  // Update W/L/T records on each player's profile
+  const updatePlayerRecords = async () => {
+    if (!session) return
+    const results = determineExhibitionResults(players, session.format)
+    for (const [uid, result] of results) {
+      // Skip bots — they don't have user profiles
+      if (uid.startsWith('bot_')) continue
+      const field = result === 'win' ? 'exhibitionRecord.wins'
+        : result === 'loss' ? 'exhibitionRecord.losses'
+        : 'exhibitionRecord.ties'
+      updateUserProfile(uid, { [field]: increment(1) } as any).catch(() => {})
+    }
+  }
+
   const advanceToNextHole = async () => {
     const idx = playedHoleNumbers.indexOf(currentHole)
     if (idx < playedHoleNumbers.length - 1) {
@@ -186,6 +221,7 @@ export default function ExhibitionPlayPage() {
           status: 'completed',
           completedAt: Timestamp.now(),
         })
+        await updatePlayerRecords()
         toast.success('Round complete!')
         router.replace(`/exhibition/${sessionId}/results`)
       } finally {
@@ -288,6 +324,7 @@ export default function ExhibitionPlayPage() {
       status: 'completed',
       completedAt: Timestamp.now(),
     })
+    await updatePlayerRecords()
   }
 
   /* ── Render ─────────────────────────────────────────────────────────── */
@@ -348,7 +385,7 @@ export default function ExhibitionPlayPage() {
         <div className="bg-muted/50 rounded-xl p-3">
           <RunningScoreboard
             format={session.format}
-            players={players}
+            players={visiblePlayers}
             teams={session.teams}
             currentHole={currentHole}
           />
@@ -357,7 +394,7 @@ export default function ExhibitionPlayPage() {
         {/* Score entry */}
         <HoleScorecard
           holeNumber={currentHole}
-          players={players}
+          players={visiblePlayers}
           teams={session.teams}
           scoringMode={session.scoringMode}
           format={session.format}

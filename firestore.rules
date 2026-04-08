@@ -177,10 +177,10 @@ service cloud.firestore {
       // Players subcollection — doc ID = userId
       match /players/{playerUid} {
         allow read: if authed();
-        // A user can only write their own player doc
+        // A user can write their own player doc
         allow create, update: if isMe(playerUid);
-        // Host can update any player (for team assignments, kicks, etc.)
-        allow update: if authed()
+        // Host can create (for bots), update (team assignments), or delete any player
+        allow create, update: if authed()
           && get(/databases/$(database)/documents/exhibitionSessions/$(sessionId)).data.hostId == request.auth.uid;
         allow delete: if isMe(playerUid)
           || (authed() && get(/databases/$(database)/documents/exhibitionSessions/$(sessionId)).data.hostId == request.auth.uid);

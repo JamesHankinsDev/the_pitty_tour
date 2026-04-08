@@ -68,7 +68,10 @@ export function HoleScorecard({
                 <AvatarFallback>{player.displayName[0]}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{player.displayName}</p>
+                <p className="text-sm font-semibold truncate">
+                  {player.displayName}
+                  {player.isBot && <span className="text-xs font-normal text-muted-foreground ml-1">Bot</span>}
+                </p>
                 <div className="flex items-center gap-2 flex-wrap">
                   {team && (
                     <span
@@ -110,7 +113,15 @@ export function HoleScorecard({
 
             {/* Score input row */}
             <div className="flex items-center gap-3">
-              {/* Gross -/+ */}
+              {/* Gross -/+ (disabled for bot players) */}
+              {player.isBot ? (
+                <div className="flex-1 text-center py-2">
+                  <p className="text-3xl font-black leading-none">
+                    {hasGross ? gross : '?'}
+                  </p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">Gross</p>
+                </div>
+              ) : (
               <div className="flex items-center gap-2 flex-1">
                 <button
                   type="button"
@@ -136,6 +147,7 @@ export function HoleScorecard({
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
+              )}
 
               {/* Net / Stableford display */}
               <div className="text-center border-l pl-3 min-w-[60px]">
